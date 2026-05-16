@@ -1,0 +1,14 @@
+node_modules/
+venv/
+.venv/
+__pycache__/
+dist/
+build/
+*.h5
+*.pt
+*.pth
+*.pkl
+*.csv
+*.zip
+*.exe
+.env
