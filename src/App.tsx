@@ -39,12 +39,7 @@ function App() {
   };
 
   const InsidePageWrapper = ({ children }: { children: React.ReactNode }) => (
-    <div className="relative min-h-screen bg-black flex">
-      {/* Sidebar - Command Hub */}
-      <ErrorBoundary>
-        <StrategicSidebar currentPath={authState} onNav={handleNav} />
-      </ErrorBoundary>
-
+    <div className="relative min-h-screen bg-black flex flex-col">
       {/* Cinematic Background Layer */}
       <div className="fixed inset-0 z-0">
         <img 
@@ -56,7 +51,7 @@ function App() {
       </div>
       
       {/* Content Layer */}
-      <div className="relative z-10 flex-1 ml-24 xl:ml-72 pt-32 pb-24 px-6 md:px-12 transition-all duration-500">
+      <div className="relative z-10 flex-1 pt-32 pb-24 px-6 md:px-12 transition-all duration-500">
         <div className="max-w-[1400px] mx-auto">
           {children}
         </div>
@@ -66,6 +61,7 @@ function App() {
       </div>
     </div>
   );
+
 
   return (
     <main className="bg-runway-black min-h-screen selection:bg-farm-accent selection:text-black font-sans overflow-x-hidden">

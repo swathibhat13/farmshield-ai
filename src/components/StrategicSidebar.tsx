@@ -20,8 +20,6 @@ const StrategicSidebar: React.FC<SidebarProps> = ({ currentPath, onNav }) => {
     { id: 'dashboard', label: 'Operational Hub', icon: LayoutGrid },
     { id: 'scanner', label: 'Neural Scanner', icon: Shield },
     { id: 'advisory', label: 'Atmospheric Hub', icon: CloudSun },
-    { id: 'features', label: 'Strategic Tech', icon: Zap },
-    { id: 'how-it-works', label: 'Research Docs', icon: Book },
   ];
 
   return (
@@ -63,24 +61,8 @@ const StrategicSidebar: React.FC<SidebarProps> = ({ currentPath, onNav }) => {
           );
         })}
       </div>
-
-      <div className="px-4 space-y-2 border-t border-white/5 pt-6">
-        {[
-          { id: 'settings', label: 'Config', icon: Settings },
-          { id: 'help', label: 'Support', icon: HelpCircle },
-        ].map((item) => (
-          <button
-            key={item.id}
-            className="w-full flex items-center gap-4 px-4 py-4 rounded-xl text-white/20 hover:text-white hover:bg-white/5 transition-all group"
-          >
-            <item.icon className="w-5 h-5 flex-shrink-0" />
-            <span className="hidden xl:block text-[10px] font-bold uppercase tracking-[0.2em]">
-              {item.label}
-            </span>
-          </button>
-        ))}
-      </div>
     </div>
+
   );
 };
 

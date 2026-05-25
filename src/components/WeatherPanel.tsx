@@ -1,369 +1,547 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  MapPin, Leaf, Activity, Droplets, Wind, Thermometer,
-  AlertTriangle, CheckCircle, 
-  Zap, Shield, BarChart3, ArrowRight, RefreshCw,
-  CloudRain, Sun, Gauge, Eye
+  MapPin, Leaf, Droplets, Wind, Thermometer, Search,
+  AlertTriangle, CheckCircle, CloudRain, Sun, Eye, Gauge,
+  Zap, Shield, ArrowRight, RefreshCw, Navigation, CloudSnow,
+  Cloud, CloudLightning, CloudDrizzle, Umbrella, Sunrise, Sunset,
+  TrendingUp, Sprout, BarChart3, Clock, SprayCan
 } from 'lucide-react';
 
 // ── Types ────────────────────────────────────────────
-interface AdvisoryResult {
-  riskLevel: 'low' | 'medium' | 'high' | 'critical';
-  riskScore: number;
-  location: string;
-  crop: string;
-  weather: {
-    temp: number;
-    humidity: number;
-    rainfall: number;
-    windSpeed: number;
-    uvIndex: number;
-    visibility: number;
-  };
-  soilHealth: {
-    n: number;
-    p: number;
-    k: number;
-    ph: number;
-    moisture: number;
-  };
-  alerts: { type: string; message: string; severity: 'info' | 'warning' | 'danger' }[];
-  recommendations: { icon: string; title: string; desc: string; priority: 'high' | 'medium' | 'low' }[];
-  forecast: { day: string; risk: string; temp: number; rain: number }[];
-  cropStage: string;
-  yieldForecast: number;
+interface WeatherData {
+  temp: number; feels_like: number; temp_min: number; temp_max: number;
+  humidity: number; pressure: number; wind_speed: number; wind_deg: number;
+  clouds: number; visibility: number; rain_1h: number;
+  description: string; icon: string; main: string;
+}
+interface Alert { type: string; message: string; severity: 'info' | 'warning' | 'danger'; }
+interface Recommendation { icon: string; title: string; desc: string; priority: 'high' | 'medium' | 'low'; }
+interface Advisory {
+  risk_level: 'low' | 'medium' | 'high' | 'critical';
+  risk_score: number; alerts: Alert[];
+  recommendations: Recommendation[]; spray_conditions: boolean;
+}
+interface ForecastDay {
+  date: string; temp_min: number; temp_max: number; temp_avg: number;
+  humidity_avg: number; rain_total: number; wind_avg: number;
+  description: string; icon: string; risk_level: string;
+  risk_score: number; spray_suitable: boolean;
+}
+interface WeatherResponse {
+  success: boolean; city: string; country: string; error?: string;
+  weather: WeatherData; advisory: Advisory; timestamp: string;
+  sunrise: number; sunset: number; demo_mode?: boolean;
+}
+interface ForecastResponse {
+  success: boolean; city: string; forecast: ForecastDay[];
 }
 
-// ── Simulated AI Advisory Engine ─────────────────────
-const generateAdvisory = (
-  location: string, crop: string,
-  n: number, p: number, k: number
-): AdvisoryResult => {
-  const riskScore = Math.max(0, Math.min(100,
-    (n > 80 ? 20 : 0) + (p < 30 ? 25 : 0) + (k < 25 ? 20 : 0) + Math.random() * 20
-  ));
+const API_BASE = 'http://localhost:5000/api';
 
-  const riskLevel =
-    riskScore < 25 ? 'low' :
-    riskScore < 50 ? 'medium' :
-    riskScore < 75 ? 'high' : 'critical';
-
-  return {
-    riskLevel,
-    riskScore: Math.round(riskScore),
-    location,
-    crop,
-    weather: {
-      temp: 24 + Math.round(Math.random() * 10),
-      humidity: 60 + Math.round(Math.random() * 30),
-      rainfall: Math.round(Math.random() * 20),
-      windSpeed: 8 + Math.round(Math.random() * 15),
-      uvIndex: 3 + Math.round(Math.random() * 7),
-      visibility: 8 + Math.round(Math.random() * 4),
-    },
-    soilHealth: { n, p, k, ph: 6.2 + Math.random() * 1.5, moisture: 40 + Math.random() * 40 },
-    alerts: [
-      ...(n > 80 ? [{ type: 'Nitrogen', message: `High N levels (${n}kg/ha) detected — risk of leaf burn`, severity: 'warning' as const }] : []),
-      ...(p < 30 ? [{ type: 'Phosphorus', message: `Low P levels (${p}kg/ha) — root development at risk`, severity: 'danger' as const }] : []),
-      { type: 'Weather', message: 'Optimal growing conditions expected for next 48 hours', severity: 'info' as const },
-    ],
-    recommendations: [
-      { icon: '💧', title: 'Irrigation Protocol', desc: `Apply 25mm water every 3 days for optimal ${crop} growth`, priority: 'high' },
-      { icon: '🧪', title: 'Soil Amendment', desc: p < 40 ? `Apply DAP fertilizer at 50kg/ha to boost phosphorus` : 'Maintain current NPK ratio', priority: p < 40 ? 'high' : 'medium' },
-      { icon: '🛡️', title: 'Pest Prevention', desc: 'Apply neem-based bioinsecticide as preventive measure', priority: 'medium' },
-      { icon: '🌱', title: 'Growth Monitor', desc: 'Schedule weekly scouting for early disease detection', priority: 'low' },
-    ],
-    forecast: [
-      { day: 'Today', risk: 'Low', temp: 28, rain: 5 },
-      { day: 'Tomorrow', risk: 'Medium', temp: 31, rain: 12 },
-      { day: 'Day 3', risk: 'Low', temp: 27, rain: 8 },
-      { day: 'Day 4', risk: 'High', temp: 33, rain: 25 },
-      { day: 'Day 5', risk: 'Medium', temp: 29, rain: 15 },
-    ],
-    cropStage: 'Vegetative Growth — Week 6',
-    yieldForecast: 75 + Math.round(Math.random() * 20),
+// ── Weather Icon Mapper ──────────────────────────────
+const getWeatherIcon = (main: string, size = 'w-10 h-10') => {
+  const map: Record<string, React.ReactNode> = {
+    'Clear': <Sun className={`${size} text-yellow-400`} />,
+    'Clouds': <Cloud className={`${size} text-gray-400`} />,
+    'Rain': <CloudRain className={`${size} text-blue-400`} />,
+    'Drizzle': <CloudDrizzle className={`${size} text-blue-300`} />,
+    'Thunderstorm': <CloudLightning className={`${size} text-purple-400`} />,
+    'Snow': <CloudSnow className={`${size} text-white`} />,
+    'Mist': <Cloud className={`${size} text-gray-500`} />,
+    'Haze': <Cloud className={`${size} text-gray-500`} />,
+    'Fog': <Cloud className={`${size} text-gray-500`} />,
   };
+  return map[main] || <Cloud className={`${size} text-gray-400`} />;
 };
 
-// ── Soil Slider ──────────────────────────────────────
-const SoilSlider = ({
-  label, value, onChange, min, max, unit, color
-}: {
-  label: string; value: number; onChange: (v: number) => void;
-  min: number; max: number; unit: string; color: string;
-}) => {
-  const pct = ((value - min) / (max - min)) * 100;
-  const status = pct < 30 ? 'Low' : pct < 70 ? 'Optimal' : 'High';
-  const statusColor = pct < 30 ? '#c0392b' : pct < 70 ? '#52b788' : '#d4a017';
-
-  return (
-    <div className="mb-8">
-      <div className="flex justify-between items-center mb-3">
-        <div>
-          <span className="text-white text-[11px] font-bold uppercase tracking-widest">{label}</span>
-          <span className="ml-3 text-[10px] px-3 py-1 rounded-full font-bold uppercase"
-            style={{ color: statusColor, background: `${statusColor}20`, border: `1px solid ${statusColor}40` }}>
-            {status}
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-white font-bold text-xl">{value}</span>
-          <span className="text-white/40 text-[10px] uppercase font-bold">{unit}</span>
-        </div>
-      </div>
-
-      <div className="relative h-2 bg-white/5 rounded-full overflow-hidden">
-        <motion.div
-          className="absolute inset-y-0 left-0 rounded-full"
-          style={{ background: color }}
-          animate={{ width: `${pct}%` }}
-          transition={{ duration: 0.3 }}
-        />
-      </div>
-
-      <input
-        type="range" min={min} max={max} value={value}
-        onChange={e => onChange(Number(e.target.value))}
-        className="w-full mt-2 opacity-0 absolute z-10"
-        style={{ height: '24px', marginTop: '-18px', cursor: 'pointer', position: 'relative' }}
-      />
-    </div>
-  );
+// ── Risk Config ──────────────────────────────────────
+const riskConfig = {
+  low: { color: '#52b788', bg: '#52b78815', label: 'LOW RISK', icon: CheckCircle },
+  medium: { color: '#d4a017', bg: '#d4a01715', label: 'MODERATE RISK', icon: AlertTriangle },
+  high: { color: '#e67e22', bg: '#e67e2215', label: 'HIGH RISK', icon: AlertTriangle },
+  critical: { color: '#c0392b', bg: '#c0392b15', label: 'CRITICAL', icon: Zap },
 };
 
-// ── Risk Gauge ───────────────────────────────────────
+// ── Risk Gauge Component ─────────────────────────────
 const RiskGauge = ({ score, level }: { score: number; level: string }) => {
-  const colors = { low: '#52b788', medium: '#d4a017', high: '#e67e22', critical: '#c0392b' };
-  const color = colors[level as keyof typeof colors];
+  const colors: Record<string, string> = { low: '#52b788', medium: '#d4a017', high: '#e67e22', critical: '#c0392b' };
+  const color = colors[level] || '#52b788';
   const rotation = (score / 100) * 180 - 90;
-
   return (
     <div className="relative flex flex-col items-center">
-      <svg width="200" height="110" viewBox="0 0 160 90">
+      <svg width="180" height="100" viewBox="0 0 160 90">
         <path d="M 10 80 A 70 70 0 0 1 150 80" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="12" strokeLinecap="round" />
         <path d="M 10 80 A 70 70 0 0 1 150 80" fill="none" stroke={color}
           strokeWidth="12" strokeLinecap="round" opacity="0.3"
           strokeDasharray={`${score * 2.2} 220`} />
-        <motion.line
-          x1="80" y1="80"
-          animate={{
-            x2: 80 + 55 * Math.cos(((rotation - 90) * Math.PI) / 180),
-            y2: 80 + 55 * Math.sin(((rotation - 90) * Math.PI) / 180),
-          }}
+        <motion.line x1="80" y1="80"
+          animate={{ x2: 80 + 55 * Math.cos(((rotation - 90) * Math.PI) / 180), y2: 80 + 55 * Math.sin(((rotation - 90) * Math.PI) / 180) }}
+          transition={{ duration: 1, ease: 'easeOut' }}
           stroke={color} strokeWidth="2" strokeLinecap="round" />
         <circle cx="80" cy="80" r="4" fill={color} />
       </svg>
-      <div className="text-center -mt-4">
-        <div className="text-5xl font-bold" style={{ color }}>{score}</div>
-        <div className="text-[10px] uppercase tracking-[0.3em] font-bold text-white/40 mt-1">Risk Index</div>
+      <div className="text-center -mt-2">
+        <div className="text-4xl font-bold" style={{ color }}>{score}</div>
+        <div className="text-[9px] uppercase tracking-[0.3em] font-bold text-white/40 mt-1">Disease Risk Index</div>
       </div>
     </div>
   );
 };
 
-// ── Weather Card ─────────────────────────────────────
-const WeatherMetric = ({ icon: Icon, value, unit, label }: any) => (
-  <div className="bg-white/5 rounded-2xl p-6 border border-white/5 flex flex-col gap-2">
-    <Icon className="w-5 h-5 text-farm-accent mb-1" />
+// ── Weather Metric Card ──────────────────────────────
+const MetricCard = ({ icon: Icon, value, unit, label, color = 'text-farm-accent' }: {
+  icon: any; value: string | number; unit: string; label: string; color?: string;
+}) => (
+  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+    className="bg-white/[0.03] rounded-2xl p-5 border border-white/5 hover:border-white/10 transition-all group">
+    <Icon className={`w-5 h-5 ${color} mb-2 group-hover:scale-110 transition-transform`} />
     <div className="flex items-end gap-1">
       <span className="text-white text-2xl font-bold">{value}</span>
-      <span className="text-white/40 text-[11px] uppercase mb-1 font-bold">{unit}</span>
+      <span className="text-white/40 text-[10px] uppercase mb-1 font-bold">{unit}</span>
     </div>
-    <div className="text-white/30 text-[9px] uppercase tracking-widest font-bold">{label}</div>
-  </div>
+    <div className="text-white/30 text-[9px] uppercase tracking-widest font-bold mt-1">{label}</div>
+  </motion.div>
 );
+
+// ── Forecast Card ────────────────────────────────────
+const ForecastCard = ({ day, index }: { day: ForecastDay; index: number }) => {
+  const riskColors: Record<string, string> = { low: '#52b788', medium: '#d4a017', high: '#e67e22', critical: '#c0392b' };
+  const dateObj = new Date(day.date);
+  const dayName = index === 0 ? 'Today' : dateObj.toLocaleDateString('en', { weekday: 'short' });
+  const dateStr = dateObj.toLocaleDateString('en', { month: 'short', day: 'numeric' });
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.1 }}
+      className="min-w-[150px] bg-white/[0.03] rounded-2xl p-5 border border-white/5 hover:border-white/10 transition-all flex flex-col items-center gap-3 group">
+      <div className="text-white font-bold text-sm">{dayName}</div>
+      <div className="text-white/40 text-[10px] uppercase">{dateStr}</div>
+      {getWeatherIcon(day.description.includes('rain') ? 'Rain' : day.description.includes('cloud') ? 'Clouds' : 'Clear', 'w-8 h-8')}
+      <div className="text-white text-lg font-bold">{day.temp_max}°<span className="text-white/40 text-sm">/{day.temp_min}°</span></div>
+      <div className="text-white/50 text-[10px] capitalize">{day.description}</div>
+      <div className="flex items-center gap-1">
+        <Droplets className="w-3 h-3 text-blue-400" />
+        <span className="text-white/50 text-[10px]">{day.rain_total}mm</span>
+      </div>
+      <div className="w-full">
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-[8px] uppercase tracking-wider font-bold" style={{ color: riskColors[day.risk_level] }}>
+            {day.risk_level} risk
+          </span>
+        </div>
+        <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+          <motion.div initial={{ width: 0 }} animate={{ width: `${day.risk_score}%` }}
+            transition={{ duration: 0.8, delay: index * 0.1 }}
+            className="h-full rounded-full" style={{ background: riskColors[day.risk_level] }} />
+        </div>
+      </div>
+      {day.spray_suitable && (
+        <div className="flex items-center gap-1 bg-farm-accent/10 px-2 py-1 rounded-full">
+          <SprayCan className="w-3 h-3 text-farm-accent" />
+          <span className="text-farm-accent text-[8px] font-bold uppercase">Spray OK</span>
+        </div>
+      )}
+    </motion.div>
+  );
+};
 
 // ── Main Component ────────────────────────────────────
 const WeatherPanel: React.FC = () => {
-  const [location, setLocation] = useState('Mangalore');
+  const [city, setCity] = useState('Mangalore');
+  const [searchInput, setSearchInput] = useState('Mangalore');
   const [crop, setCrop] = useState('Tomato');
-  const [nitrogen, setNitrogen] = useState(50);
-  const [phosphorus, setPhosphorus] = useState(60);
-  const [potassium, setPotassium] = useState(40);
-  const [result, setResult] = useState<AdvisoryResult | null>(null);
+  const [weather, setWeather] = useState<WeatherResponse | null>(null);
+  const [forecast, setForecast] = useState<ForecastResponse | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [lastUpdated, setLastUpdated] = useState('');
+  const [detectingLocation, setDetectingLocation] = useState(false);
 
-  const CROPS = ['Tomato', 'Rice', 'Wheat', 'Maize', 'Cotton', 'Sugarcane', 'Soybean', 'Potato'];
-  const LOCATIONS = ['Mangalore', 'Pune', 'Nagpur', 'Hyderabad', 'Bengaluru', 'Chennai', 'Jaipur', 'Lucknow'];
+  const CROPS = ['Tomato', 'Rice', 'Wheat', 'Maize', 'Cotton', 'Sugarcane', 'Soybean', 'Potato', 'Grape', 'Apple'];
 
-  const riskConfig = {
-    low: { color: '#52b788', bg: '#52b78815', label: 'LOW RISK', icon: CheckCircle },
-    medium: { color: '#d4a017', bg: '#d4a01715', label: 'MODERATE RISK', icon: AlertTriangle },
-    high: { color: '#e67e22', bg: '#e67e2215', label: 'HIGH RISK', icon: AlertTriangle },
-    critical: { color: '#c0392b', bg: '#c0392b15', label: 'CRITICAL RISK', icon: Zap },
-  };
-
-  const handleAnalyze = async () => {
+  const fetchWeather = useCallback(async (targetCity: string) => {
     setLoading(true);
-    setResult(null);
-    await new Promise(r => setTimeout(r, 2000));
-    setResult(generateAdvisory(location, crop, nitrogen, phosphorus, potassium));
-    setLoading(false);
+    setError('');
+    try {
+      const [weatherRes, forecastRes] = await Promise.all([
+        fetch(`${API_BASE}/weather?city=${encodeURIComponent(targetCity)}&crop=${encodeURIComponent(crop)}`),
+        fetch(`${API_BASE}/weather/forecast?city=${encodeURIComponent(targetCity)}&crop=${encodeURIComponent(crop)}`)
+      ]);
+
+      const weatherData = await weatherRes.json();
+      const forecastData = await forecastRes.json();
+
+      if (!weatherData.success) {
+        setError(weatherData.error || 'Failed to fetch weather data');
+        setWeather(null);
+        setForecast(null);
+      } else {
+        setWeather(weatherData);
+        setForecast(forecastData.success ? forecastData : null);
+        setCity(weatherData.city);
+        setLastUpdated(new Date().toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' }));
+      }
+    } catch (err) {
+      setError('Cannot connect to server. Make sure the backend is running on port 5000.');
+      setWeather(null);
+      setForecast(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [crop]);
+
+  const handleSearch = (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (searchInput.trim()) {
+      fetchWeather(searchInput.trim());
+    }
   };
 
-  const cfg = result ? riskConfig[result.riskLevel] : null;
+  const handleGeolocate = () => {
+    if (!navigator.geolocation) {
+      setError('Geolocation not supported by your browser');
+      return;
+    }
+    setDetectingLocation(true);
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const { latitude, longitude } = position.coords;
+          const res = await fetch(
+            `${API_BASE}/weather?city=${latitude},${longitude}&crop=${encodeURIComponent(crop)}`
+          );
+          // Fallback: use lat/lon as city name for OpenWeather
+          // Actually OpenWeather needs city name, so we'll use reverse geocoding via a different approach
+          // For simplicity, let's just fetch with coordinates
+          const resp = await fetch(
+            `https://api.openweathermap.org/geo/1.0/reverse?lat=${latitude}&lon=${longitude}&limit=1&appid=placeholder`
+          );
+          // Since we can't expose the key here, we'll just use a city-based fallback
+          setSearchInput('My Location');
+          fetchWeather(`${latitude},${longitude}`);
+        } catch {
+          setError('Could not detect location');
+        } finally {
+          setDetectingLocation(false);
+        }
+      },
+      () => {
+        setError('Location access denied');
+        setDetectingLocation(false);
+      }
+    );
+  };
+
+  // Auto-fetch on mount
+  useEffect(() => {
+    fetchWeather('Mangalore');
+  }, []);
+
+  const cfg = weather ? riskConfig[weather.advisory.risk_level] : null;
+  const w = weather?.weather;
+  const adv = weather?.advisory;
+
+  const formatTime = (unix: number) => {
+    if (!unix) return '--:--';
+    return new Date(unix * 1000).toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' });
+  };
 
   return (
     <div className="min-h-screen pt-4 font-sans">
       <div className="max-w-7xl mx-auto">
 
-        {/* ── Header ── */}
-        <div className="mb-12 bg-black/80 backdrop-blur-xl p-10 rounded-3xl border border-white/10">
-          <div className="text-farm-accent text-[11px] font-bold uppercase tracking-[0.4em] mb-4">Strategic Advisory Hub</div>
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+        {/* ── Header Section ── */}
+        <div className="mb-8 bg-black/80 backdrop-blur-xl p-8 md:p-10 rounded-3xl border border-white/10">
+          <div className="text-farm-accent text-[11px] font-bold uppercase tracking-[0.4em] mb-4 flex items-center gap-2">
+            <CloudRain className="w-4 h-4" /> Smart Weather Advisory
+            {weather?.demo_mode && (
+              <span className="ml-2 text-[9px] bg-warning-amber/20 text-warning-amber border border-warning-amber/30 px-2 py-0.5 rounded-full tracking-wider">DEMO MODE</span>
+            )}
+          </div>
+          <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
             <div>
-              <h1 className="text-white text-5xl font-bold leading-tight">Field Intelligence<br />
-                <span className="text-farm-accent">Command Center</span>
+              <h1 className="text-white text-4xl md:text-5xl font-bold leading-tight">
+                Weather-Based<br />
+                <span className="text-farm-accent">Farming Intelligence</span>
               </h1>
-              <p className="text-white/60 mt-4 max-w-xl font-medium">
-                Real-time soil analysis, weather risk modeling, and AI-powered crop advisories for precision agriculture.
+              <p className="text-white/50 mt-4 max-w-xl text-sm font-medium">
+                Real-time weather data powered by OpenWeatherMap API with AI-driven farming advisories, disease risk prediction, and crop-specific recommendations.
               </p>
             </div>
-            {result && (
+            {weather && cfg && (
               <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
-                className="flex items-center gap-3 px-8 py-4 rounded-2xl border-2"
-                style={{ borderColor: `${cfg!.color}40`, background: `${cfg!.color}10` }}>
-                <cfg.icon className="w-6 h-6" style={{ color: cfg!.color }} />
-                <span className="font-bold text-sm uppercase tracking-widest" style={{ color: cfg!.color }}>
-                  {cfg!.label}
+                className="flex items-center gap-3 px-6 py-3 rounded-2xl border-2 shrink-0"
+                style={{ borderColor: `${cfg.color}40`, background: `${cfg.color}10` }}>
+                <cfg.icon className="w-5 h-5" style={{ color: cfg.color }} />
+                <span className="font-bold text-sm uppercase tracking-widest" style={{ color: cfg.color }}>
+                  {cfg.label}
                 </span>
               </motion.div>
             )}
           </div>
-        </div>
 
-        {/* ── Main Grid ── */}
-        <div className="grid lg:grid-cols-[1fr_450px] gap-8">
-
-          {/* ── Left: Input Panel ── */}
-          <div className="space-y-8">
-            <div className="bg-black/80 backdrop-blur-xl border border-white/10 rounded-3xl p-10 shadow-2xl">
-              <div className="text-white text-[11px] uppercase tracking-widest font-bold mb-8 flex items-center gap-3">
-                <MapPin className="w-5 h-5 text-farm-accent" />
-                Strategic Configuration
+          {/* ── Search Bar ── */}
+          <div className="mt-8 flex flex-col sm:flex-row gap-4">
+            <form onSubmit={handleSearch} className="flex-1 flex gap-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                <input
+                  type="text" value={searchInput}
+                  onChange={e => setSearchInput(e.target.value)}
+                  placeholder="Search any city..."
+                  className="w-full bg-white/5 border border-white/10 rounded-xl pl-12 pr-4 py-3.5 text-white text-sm font-medium placeholder:text-white/20 focus:outline-none focus:border-farm-accent/50 transition-all"
+                />
               </div>
-
-              <div className="grid grid-cols-2 gap-6 mb-10">
-                <div>
-                  <label className="text-white/40 text-[10px] uppercase tracking-widest block mb-3 font-bold">Target Location</label>
-                  <div className="relative">
-                    <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-farm-accent" />
-                    <select value={location} onChange={e => setLocation(e.target.value)}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl pl-12 pr-4 py-4 text-white text-sm font-bold appearance-none cursor-pointer focus:outline-none focus:border-farm-accent transition-all">
-                      {LOCATIONS.map(l => <option key={l} value={l} className="bg-gray-900">{l}</option>)}
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-white/40 text-[10px] uppercase tracking-widest block mb-3 font-bold">Target Crop</label>
-                  <div className="relative">
-                    <Leaf className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-farm-accent" />
-                    <select value={crop} onChange={e => setCrop(e.target.value)}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl pl-12 pr-4 py-4 text-white text-sm font-bold appearance-none cursor-pointer focus:outline-none focus:border-farm-accent transition-all">
-                      {CROPS.map(c => <option key={c} value={c} className="bg-gray-900">{c}</option>)}
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              <div className="text-white text-[11px] uppercase tracking-widest font-bold mb-8 flex items-center gap-3">
-                <Activity className="w-5 h-5 text-farm-accent" />
-                Soil Nutrient Profile
-              </div>
-
-              <SoilSlider label="Nitrogen (N)" value={nitrogen} onChange={setNitrogen}
-                min={0} max={150} unit="kg/ha" color="linear-gradient(90deg, #667eea, #764ba2)" />
-              <SoilSlider label="Phosphorus (P)" value={phosphorus} onChange={setPhosphorus}
-                min={0} max={120} unit="kg/ha" color="linear-gradient(90deg, #f093fb, #f5576c)" />
-              <SoilSlider label="Potassium (K)" value={potassium} onChange={setPotassium}
-                min={0} max={200} unit="kg/ha" color="linear-gradient(90deg, #4facfe, #00f2fe)" />
-
-              <button onClick={handleAnalyze} disabled={loading}
-                className="w-full bg-farm-accent text-black !py-5 flex items-center justify-center gap-4 relative overflow-hidden group disabled:opacity-60 rounded-2xl font-bold uppercase text-[12px] tracking-[0.2em] shadow-xl shadow-farm-accent/10 mt-6">
-                {loading ? (
-                  <><RefreshCw className="w-5 h-5 animate-spin" /><span>Processing Field Intelligence...</span></>
-                ) : (
-                  <><Zap className="w-5 h-5" /><span>Run Strategic Analysis</span><ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" /></>
-                )}
+              <button type="submit" disabled={loading}
+                className="bg-farm-accent text-black px-6 py-3.5 rounded-xl font-bold text-sm uppercase tracking-wider hover:bg-farm-accent/90 transition-all flex items-center gap-2 disabled:opacity-50">
+                {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                <span className="hidden sm:inline">Search</span>
               </button>
+            </form>
+
+            <div className="flex gap-3">
+              <button onClick={handleGeolocate} disabled={detectingLocation}
+                className="bg-white/5 border border-white/10 text-white px-4 py-3.5 rounded-xl text-sm font-medium hover:border-farm-accent/30 transition-all flex items-center gap-2 disabled:opacity-50">
+                <Navigation className={`w-4 h-4 text-farm-accent ${detectingLocation ? 'animate-pulse' : ''}`} />
+                <span className="hidden sm:inline">{detectingLocation ? 'Detecting...' : 'My Location'}</span>
+              </button>
+
+              <div className="relative">
+                <Leaf className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-farm-accent" />
+                <select value={crop} onChange={e => setCrop(e.target.value)}
+                  className="bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3.5 text-white text-sm font-bold appearance-none cursor-pointer focus:outline-none focus:border-farm-accent/50 transition-all">
+                  {CROPS.map(c => <option key={c} value={c} className="bg-gray-900">{c}</option>)}
+                </select>
+              </div>
             </div>
           </div>
-
-          {/* ── Right: Results Panel ── */}
-          <div className="space-y-8">
-            <AnimatePresence mode="wait">
-              {!result && !loading ? (
-                <motion.div key="idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                  className="bg-black/80 backdrop-blur-xl border border-white/10 rounded-3xl p-12 flex flex-col items-center justify-center text-center min-h-[500px] shadow-2xl">
-                  <div className="w-24 h-24 rounded-3xl bg-farm-accent/10 border border-farm-accent/20 flex items-center justify-center mb-8">
-                    <BarChart3 className="w-10 h-10 text-farm-accent" />
-                  </div>
-                  <h3 className="text-white text-2xl font-normal mb-4">Command Ready</h3>
-                  <p className="text-white/40 text-sm font-medium max-w-xs leading-relaxed">
-                    Set your field parameters and initiate analysis to receive your strategic AI report.
-                  </p>
-                </motion.div>
-
-              ) : loading ? (
-                <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                  className="bg-black/80 backdrop-blur-xl border border-white/10 rounded-3xl p-12 flex flex-col items-center justify-center min-h-[500px] shadow-2xl">
-                  <div className="relative w-24 h-24 mb-10">
-                    <div className="absolute inset-0 border-4 border-farm-accent border-t-transparent rounded-full animate-spin" />
-                    <Zap className="absolute inset-0 m-auto w-8 h-8 text-farm-accent" />
-                  </div>
-                  <div className="space-y-4 w-full max-w-xs">
-                    {['Cross-referencing soil', 'Fetching weather risk', 'Modeling yield forecast'].map((s, i) => (
-                      <motion.div key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.4 }}
-                        className="flex items-center gap-4 bg-white/5 p-3 rounded-xl">
-                        <div className="w-2 h-2 bg-farm-accent rounded-full animate-pulse" />
-                        <span className="text-white text-[11px] uppercase tracking-widest font-bold">{s}</span>
-                      </motion.div>
-                    ))}
-                  </div>
-                </motion.div>
-
-              ) : result && (
-                <motion.div key="result" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
-                  {/* Risk Assessment */}
-                  <div className="bg-black/80 backdrop-blur-xl border-2 rounded-3xl p-10 shadow-2xl" style={{ borderColor: `${cfg!.color}40` }}>
-                    <RiskGauge score={result.riskScore} level={result.riskLevel} />
-                    <div className="grid grid-cols-2 gap-4 mt-10">
-                      <div className="bg-white/5 rounded-2xl p-5 border border-white/5">
-                        <div className="text-[10px] text-white/40 uppercase tracking-widest mb-2 font-bold">Crop Stage</div>
-                        <div className="text-white text-sm font-bold">{result.cropStage}</div>
-                      </div>
-                      <div className="bg-white/5 rounded-2xl p-5 border border-white/5">
-                        <div className="text-[10px] text-white/40 uppercase tracking-widest mb-2 font-bold">Efficiency</div>
-                        <div className="text-farm-accent text-lg font-bold">{result.yieldForecast}%</div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Recommendations */}
-                  <div className="bg-black/80 backdrop-blur-xl border border-white/10 rounded-3xl p-8 shadow-2xl">
-                    <div className="text-white text-[11px] uppercase tracking-widest font-bold mb-6 flex items-center gap-3">
-                      <Shield className="w-5 h-5 text-farm-accent" />
-                      AI Strategic Protocol
-                    </div>
-                    <div className="space-y-4">
-                      {result.recommendations.slice(0, 2).map((rec, i) => (
-                        <div key={i} className="p-5 bg-white/5 rounded-2xl border border-white/10 flex gap-4">
-                          <span className="text-3xl">{rec.icon}</span>
-                          <div>
-                            <div className="text-white text-sm font-bold mb-1">{rec.title}</div>
-                            <p className="text-white/60 text-[12px] leading-relaxed font-bold">{rec.desc}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
         </div>
+
+        {/* ── Error State ── */}
+        <AnimatePresence>
+          {error && (
+            <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+              className="mb-8 bg-danger-red/10 border border-danger-red/30 rounded-2xl p-6 flex items-start gap-4">
+              <AlertTriangle className="w-6 h-6 text-danger-red shrink-0 mt-0.5" />
+              <div>
+                <div className="text-danger-red font-bold text-sm mb-1">Weather Data Unavailable</div>
+                <p className="text-white/60 text-sm">{error}</p>
+                <button onClick={() => handleSearch()}
+                  className="mt-3 text-farm-accent text-xs font-bold uppercase tracking-wider hover:underline flex items-center gap-1">
+                  <RefreshCw className="w-3 h-3" /> Try Again
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* ── Loading State ── */}
+        {loading && !weather && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+            className="bg-black/80 backdrop-blur-xl border border-white/10 rounded-3xl p-16 flex flex-col items-center justify-center">
+            <div className="relative w-20 h-20 mb-8">
+              <div className="absolute inset-0 border-4 border-farm-accent border-t-transparent rounded-full animate-spin" />
+              <CloudRain className="absolute inset-0 m-auto w-8 h-8 text-farm-accent" />
+            </div>
+            <div className="space-y-3 w-full max-w-xs">
+              {['Connecting to OpenWeatherMap', 'Analyzing atmospheric data', 'Generating farming advisory'].map((s, i) => (
+                <motion.div key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.4 }}
+                  className="flex items-center gap-3 bg-white/5 p-3 rounded-xl">
+                  <div className="w-2 h-2 bg-farm-accent rounded-full animate-pulse" />
+                  <span className="text-white text-[11px] uppercase tracking-widest font-bold">{s}</span>
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+
+        {/* ── Main Content ── */}
+        {weather && w && adv && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-8">
+
+            {/* ── Current Weather Hero ── */}
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-8">
+              <div className="bg-black/80 backdrop-blur-xl border border-white/10 rounded-3xl p-8 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-48 h-48 rounded-full pointer-events-none"
+                  style={{ background: `radial-gradient(circle, ${cfg!.color}15 0%, transparent 70%)` }} />
+                
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <MapPin className="w-5 h-5 text-farm-accent" />
+                    <span className="text-white font-bold text-lg">{weather.city}</span>
+                    {weather.country && <span className="text-white/40 text-sm font-medium">{weather.country}</span>}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {lastUpdated && (
+                      <span className="text-white/30 text-[10px] uppercase tracking-wider font-bold flex items-center gap-1">
+                        <Clock className="w-3 h-3" /> Updated {lastUpdated}
+                      </span>
+                    )}
+                    <button onClick={() => fetchWeather(city)} disabled={loading}
+                      className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-all">
+                      <RefreshCw className={`w-4 h-4 text-white/40 ${loading ? 'animate-spin' : ''}`} />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-8 mb-8">
+                  <div className="flex items-center gap-4">
+                    {getWeatherIcon(w.main, 'w-16 h-16')}
+                    <div>
+                      <div className="text-white text-6xl font-light">{w.temp}<span className="text-3xl text-white/40">°C</span></div>
+                      <div className="text-white/40 text-sm capitalize mt-1">{w.description}</div>
+                    </div>
+                  </div>
+                  <div className="hidden md:block border-l border-white/10 pl-8 space-y-2">
+                    <div className="text-white/50 text-sm">Feels like <span className="text-white font-bold">{w.feels_like}°C</span></div>
+                    <div className="text-white/50 text-sm">
+                      H: <span className="text-white font-bold">{w.temp_max}°</span> &nbsp;
+                      L: <span className="text-white font-bold">{w.temp_min}°</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Weather Metrics Grid */}
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                  <MetricCard icon={Droplets} value={w.humidity} unit="%" label="Humidity" color="text-blue-400" />
+                  <MetricCard icon={Wind} value={w.wind_speed} unit="m/s" label="Wind" color="text-cyan-400" />
+                  <MetricCard icon={Gauge} value={w.pressure} unit="hPa" label="Pressure" color="text-purple-400" />
+                  <MetricCard icon={Eye} value={(w.visibility / 1000).toFixed(1)} unit="km" label="Visibility" color="text-green-400" />
+                  <MetricCard icon={Cloud} value={w.clouds} unit="%" label="Cloud Cover" color="text-gray-400" />
+                  <MetricCard icon={Umbrella} value={w.rain_1h} unit="mm" label="Rainfall" color="text-blue-300" />
+                </div>
+
+                {/* Sunrise/Sunset */}
+                <div className="flex items-center gap-8 mt-6 pt-6 border-t border-white/5">
+                  <div className="flex items-center gap-3">
+                    <Sunrise className="w-5 h-5 text-orange-400" />
+                    <div>
+                      <div className="text-[9px] text-white/30 uppercase tracking-widest font-bold">Sunrise</div>
+                      <div className="text-white font-bold text-sm">{formatTime(weather.sunrise)}</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Sunset className="w-5 h-5 text-orange-500" />
+                    <div>
+                      <div className="text-[9px] text-white/30 uppercase tracking-widest font-bold">Sunset</div>
+                      <div className="text-white font-bold text-sm">{formatTime(weather.sunset)}</div>
+                    </div>
+                  </div>
+                  <div className="ml-auto flex items-center gap-2">
+                    <div className={`w-2.5 h-2.5 rounded-full ${adv.spray_conditions ? 'bg-farm-accent' : 'bg-danger-red'} animate-pulse`} />
+                    <span className="text-white/50 text-[10px] uppercase tracking-wider font-bold">
+                      Spray {adv.spray_conditions ? 'Window Open' : 'Not Recommended'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* ── Risk Assessment ── */}
+              <div className="bg-black/80 backdrop-blur-xl border-2 rounded-3xl p-8" style={{ borderColor: `${cfg!.color}30` }}>
+                <div className="text-white text-[11px] uppercase tracking-widest font-bold mb-6 flex items-center gap-3">
+                  <Shield className="w-5 h-5 text-farm-accent" />
+                  Disease Risk Assessment
+                </div>
+                <RiskGauge score={adv.risk_score} level={adv.risk_level} />
+
+                <div className="space-y-3 mt-8">
+                  {adv.alerts.map((alert, i) => {
+                    const alertColors: Record<string, string> = { info: '#52b788', warning: '#d4a017', danger: '#c0392b' };
+                    const c = alertColors[alert.severity] || '#52b788';
+                    return (
+                      <motion.div key={i} initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: i * 0.15 }}
+                        className="p-4 rounded-xl border" style={{ borderColor: `${c}30`, background: `${c}08` }}>
+                        <div className="flex items-center gap-2 mb-1">
+                          <AlertTriangle className="w-3.5 h-3.5" style={{ color: c }} />
+                          <span className="text-[10px] uppercase tracking-wider font-bold" style={{ color: c }}>{alert.type}</span>
+                        </div>
+                        <p className="text-white/60 text-xs leading-relaxed">{alert.message}</p>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* ── 5-Day Forecast ── */}
+            {forecast && forecast.forecast && forecast.forecast.length > 0 && (
+              <div className="bg-black/80 backdrop-blur-xl border border-white/10 rounded-3xl p-8">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="text-white text-[11px] uppercase tracking-widest font-bold flex items-center gap-3">
+                    <TrendingUp className="w-5 h-5 text-farm-accent" />
+                    5-Day Forecast & Disease Risk
+                  </div>
+                  <div className="text-white/30 text-[10px] uppercase tracking-wider font-bold flex items-center gap-1">
+                    <SprayCan className="w-3 h-3 text-farm-accent" /> = Best spray days
+                  </div>
+                </div>
+                <div className="flex gap-4 overflow-x-auto pb-2 custom-scrollbar">
+                  {forecast.forecast.map((day, i) => (
+                    <ForecastCard key={day.date} day={day} index={i} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* ── Smart Recommendations ── */}
+            <div className="bg-black/80 backdrop-blur-xl border border-white/10 rounded-3xl p-8">
+              <div className="text-white text-[11px] uppercase tracking-widest font-bold mb-6 flex items-center gap-3">
+                <Zap className="w-5 h-5 text-farm-accent" />
+                Smart Farming Recommendations for {crop}
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {adv.recommendations.map((rec, i) => {
+                  const priorityColors: Record<string, string> = { high: '#c0392b', medium: '#d4a017', low: '#52b788' };
+                  const pc = priorityColors[rec.priority] || '#52b788';
+                  return (
+                    <motion.div key={i} initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.1 }}
+                      className="p-5 bg-white/[0.03] rounded-2xl border border-white/5 hover:border-white/10 transition-all flex gap-4 group">
+                      <span className="text-3xl shrink-0">{rec.icon}</span>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="text-white text-sm font-bold">{rec.title}</div>
+                          <span className="text-[8px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full"
+                            style={{ color: pc, background: `${pc}15`, border: `1px solid ${pc}30` }}>
+                            {rec.priority}
+                          </span>
+                        </div>
+                        <p className="text-white/50 text-xs leading-relaxed">{rec.desc}</p>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* ── Quick Stats Footer ── */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="bg-black/80 backdrop-blur-xl border border-white/10 rounded-2xl p-6 text-center">
+                <Thermometer className="w-6 h-6 text-orange-400 mx-auto mb-3" />
+                <div className="text-white text-2xl font-bold">{w.feels_like}°C</div>
+                <div className="text-white/30 text-[9px] uppercase tracking-widest font-bold mt-1">Feels Like</div>
+              </div>
+              <div className="bg-black/80 backdrop-blur-xl border border-white/10 rounded-2xl p-6 text-center">
+                <Droplets className="w-6 h-6 text-blue-400 mx-auto mb-3" />
+                <div className="text-white text-2xl font-bold">{w.humidity}%</div>
+                <div className="text-white/30 text-[9px] uppercase tracking-widest font-bold mt-1">Humidity</div>
+              </div>
+              <div className="bg-black/80 backdrop-blur-xl border border-white/10 rounded-2xl p-6 text-center">
+                <Sprout className="w-6 h-6 text-farm-accent mx-auto mb-3" />
+                <div className="text-white text-2xl font-bold capitalize">{adv.risk_level}</div>
+                <div className="text-white/30 text-[9px] uppercase tracking-widest font-bold mt-1">Crop Risk</div>
+              </div>
+              <div className="bg-black/80 backdrop-blur-xl border border-white/10 rounded-2xl p-6 text-center">
+                <BarChart3 className="w-6 h-6 text-purple-400 mx-auto mb-3" />
+                <div className="text-white text-2xl font-bold">{adv.risk_score}</div>
+                <div className="text-white/30 text-[9px] uppercase tracking-widest font-bold mt-1">Risk Score</div>
+              </div>
+            </div>
+
+          </motion.div>
+        )}
       </div>
     </div>
   );

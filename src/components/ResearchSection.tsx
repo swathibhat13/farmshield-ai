@@ -111,44 +111,59 @@ Using microphones in the field, our AI can detect the specific sound frequencies
 
   return (
     <div className="w-full relative">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 auto-rows-fr">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 auto-rows-fr">
         {articles.map((article, i) => (
           <motion.div 
             key={i} 
             layoutId={`article-${i}`}
             onClick={() => onArticleClick(article)}
-            className={`${article.className} group cursor-pointer relative overflow-hidden rounded-xl border border-white/5 bg-dark-surface`}
+            className={`${article.className} group cursor-pointer relative overflow-hidden bg-black/60 backdrop-blur-xl border border-white/5 hover:border-farm-accent/40 transition-colors duration-500 rounded-none shadow-[0_0_20px_rgba(0,0,0,0.5)] hover:shadow-[0_0_30px_rgba(82,183,136,0.15)]`}
           >
+            {/* Tech Corners */}
+            <div className="absolute top-0 left-0 w-8 h-8 border-t border-l border-white/20 group-hover:border-farm-accent transition-colors duration-500 z-20 pointer-events-none" />
+            <div className="absolute top-0 right-0 w-8 h-8 border-t border-r border-white/20 group-hover:border-farm-accent transition-colors duration-500 z-20 pointer-events-none" />
+            <div className="absolute bottom-0 left-0 w-8 h-8 border-b border-l border-white/20 group-hover:border-farm-accent transition-colors duration-500 z-20 pointer-events-none" />
+            <div className="absolute bottom-0 right-0 w-8 h-8 border-b border-r border-white/20 group-hover:border-farm-accent transition-colors duration-500 z-20 pointer-events-none" />
+
             <div className="absolute inset-0 overflow-hidden">
               <img 
                 src={article.image} 
                 alt={article.title}
-                className="w-full h-full object-cover opacity-60 transition-transform duration-[2000ms] group-hover:scale-110"
+                className="w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-all duration-1000 group-hover:scale-105"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent p-6 md:p-8 flex flex-col justify-end">
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="w-2 h-2 bg-farm-accent rounded-full" />
-                  <span className="text-[10px] font-bold tracking-[2px] uppercase text-white/60">
-                    {article.category}
-                  </span>
+              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent p-6 md:p-8 flex flex-col justify-end">
+                
+                {/* Tech Badges */}
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="flex items-center gap-2 px-2 py-1 bg-white/5 border border-white/10 backdrop-blur-md">
+                     <span className="w-1.5 h-1.5 bg-farm-accent rounded-full animate-ping" />
+                     <span className="text-[9px] font-mono tracking-[0.2em] uppercase text-white/70">
+                       {article.category}
+                     </span>
+                  </div>
                 </div>
-                <h3 className={`text-white leading-[1.2] tracking-tight group-hover:text-farm-accent transition-colors ${
-                  article.className.includes('lg:col-span-2') ? 'text-2xl md:text-3xl max-w-lg' : 'text-lg md:text-xl'
+                
+                <h3 className={`text-white font-light leading-tight tracking-tight group-hover:text-farm-accent transition-colors ${
+                  article.className.includes('lg:col-span-2') ? 'text-3xl max-w-lg' : 'text-xl'
                 }`}>
                   {article.title}
                 </h3>
+                
+                {/* Decorative Data Bars */}
+                <div className="flex items-center gap-1 mt-6 opacity-0 group-hover:opacity-100 transition-opacity duration-500 translate-y-2 group-hover:translate-y-0">
+                  <div className="h-1 w-8 bg-farm-accent" />
+                  <div className="h-1 w-2 bg-farm-accent/50" />
+                  <div className="h-1 w-1 bg-farm-accent/30" />
+                  <span className="ml-auto text-[8px] font-mono tracking-widest text-white/30 uppercase">Open File &gt;&gt;</span>
+                </div>
               </div>
             </div>
 
-            {/* Hover State Overlay */}
-            <div className="absolute inset-0 bg-farm-accent opacity-0 group-hover:opacity-[0.03] transition-opacity duration-500" />
-            <div className="absolute inset-0 ring-1 ring-white/10 ring-inset group-hover:ring-farm-accent/30 transition-all duration-500" />
-            
-            <div className="absolute top-6 right-6 opacity-0 group-hover:opacity-100 transition-all duration-500 translate-x-2 group-hover:translate-x-0">
-              <div className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20">
-                <BookOpen className="text-white w-4 h-4" />
-              </div>
-            </div>
+            {/* Scanning Line Effect on Hover */}
+            <div className="absolute left-0 right-0 h-[1px] bg-farm-accent/50 shadow-[0_0_10px_#52b788] top-[-10px] group-hover:top-[110%] transition-all duration-[2000ms] ease-in-out opacity-0 group-hover:opacity-100 z-10" />
+
+            {/* Background Grid Pattern */}
+            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/grid.png')] opacity-10 mix-blend-overlay z-0" />
           </motion.div>
         ))}
       </div>

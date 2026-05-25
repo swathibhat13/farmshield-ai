@@ -1,7 +1,6 @@
-
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Eye, EyeOff, User, Mail, Lock } from 'lucide-react';
+import { Eye, EyeOff, User, Mail, Lock, AlertCircle } from 'lucide-react';
 
 interface AuthProps {
   onLogin: () => void;
@@ -11,6 +10,8 @@ interface AuthProps {
 const Auth: React.FC<AuthProps> = ({ onLogin, initialMode = 'login' }) => {
   const [isLogin, setIsLogin] = useState(initialMode === 'login');
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -18,9 +19,47 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialMode = 'login' }) => {
     confirmPassword: ''
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onLogin();
+    setLoading(true);
+    setError(null);
+
+    const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register';
+    const baseUrl = 'http://127.0.0.1:5000';
+
+    try {
+      const response = await fetch(`${baseUrl}${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          password: formData.password
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        if (isLogin) {
+          localStorage.setItem('fs_token', data.token);
+          localStorage.setItem('fs_logged_in', 'true');
+          if (data.user?.name) {
+            localStorage.setItem('fs_user_name', data.user.name);
+          }
+          onLogin();
+        } else {
+          setIsLogin(true);
+          setError("Account created! Please sign in.");
+        }
+      } else {
+        setError(data.error || "Authentication failed");
+      }
+    } catch (err) {
+      setError("Connection to neural auth failed. Ensure backend is running.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -54,6 +93,17 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialMode = 'login' }) => {
           </p>
         </div>
 
+        {error && (
+          <motion.div 
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            className={`mb-6 p-4 rounded-lg flex items-center gap-3 text-xs font-bold uppercase tracking-wider ${error.includes('created') ? 'bg-healthy-emerald/20 text-healthy-emerald border border-healthy-emerald/30' : 'bg-danger-red/20 text-danger-red border border-danger-red/30'}`}
+          >
+            <AlertCircle size={16} />
+            {error}
+          </motion.div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-5">
           {!isLogin && (
             <div className="relative">
@@ -72,6 +122,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialMode = 'login' }) => {
             <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-cool-slate" />
             <input
               type="email"
+              required
               placeholder="Email Address"
               className="w-full bg-white/5 border border-white/10 rounded-lg py-3.5 pl-12 pr-4 text-white placeholder:text-cool-slate/50 focus:border-farm-accent transition-all outline-none"
               value={formData.email}
@@ -83,6 +134,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialMode = 'login' }) => {
             <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-cool-slate" />
             <input
               type={showPassword ? 'text' : 'password'}
+              required
               placeholder="Password"
               className="w-full bg-white/5 border border-white/10 rounded-lg py-3.5 pl-12 pr-12 text-white placeholder:text-cool-slate/50 focus:border-farm-accent transition-all outline-none"
               value={formData.password}
@@ -97,14 +149,22 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialMode = 'login' }) => {
             </button>
           </div>
 
-          <button type="submit" className="w-full btn-runway mt-4 !py-4 text-[15px]">
+          <button 
+            type="submit" 
+            disabled={loading}
+            className="w-full btn-runway mt-4 !py-4 text-[15px] disabled:opacity-50 flex items-center justify-center gap-3"
+          >
+            {loading && <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />}
             {isLogin ? 'Sign In' : 'Create Account'}
           </button>
         </form>
 
         <div className="mt-8 pt-8 border-t border-white/5 text-center">
           <button
-            onClick={() => setIsLogin(!isLogin)}
+            onClick={() => {
+              setIsLogin(!isLogin);
+              setError(null);
+            }}
             className="text-[13px] text-cool-slate hover:text-farm-accent transition-colors"
           >
             {isLogin ? "Don't have an account? Register" : "Already have an account? Sign In"}

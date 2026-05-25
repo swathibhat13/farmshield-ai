@@ -1,26 +1,63 @@
 <!DOCTYPE html>
 <html lang="en" class="bg-black">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    
-    <!-- SEO Best Practices -->
-    <title>FarmShield AI | Advanced Agricultural Intelligence Hub</title>
-    <meta name="description" content="FarmShield AI provides state-of-the-art agricultural diagnostics using computer vision and atmospheric intelligence." />
-    <meta name="keywords" content="agriculture, AI, plant disease, weather advisory, crop health" />
-    
-    <!-- Modern Typography -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet">
-    
-    <style>
-      body { margin: 0; background: black; }
-    </style>
-  </head>
-  <body class="selection:bg-farm-accent selection:text-black">
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- SEO Best Practices -->
+  <title>FarmShield AI | Advanced Agricultural Intelligence Hub</title>
+  <meta name="description"
+    content="FarmShield AI provides state-of-the-art agricultural diagnostics using computer vision and atmospheric intelligence." />
+  <meta name="keywords" content="agriculture, AI, plant disease, weather advisory, crop health" />
+
+  <!-- Modern Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap"
+    rel="stylesheet">
+
+  <style>
+    body {
+      margin: 0;
+      background: black;
+    }
+
+    /* Hide Google Translate Default UI */
+    .VIpgJd-ZVi9od-ORHb-OEVmcd {
+      display: none !important;
+    }
+
+    .goog-te-banner-frame {
+      display: none !important;
+    }
+
+    body {
+      top: 0 !important;
+    }
+
+    #google_translate_element {
+      display: none !important;
+    }
+  </style>
+</head>
+
+<body class="selection:bg-farm-accent selection:text-black">
+  <div id="root"></div>
+  <script type="text/javascript">
+    function googleTranslateElementInit() {
+      new google.translate.TranslateElement({
+        pageLanguage: 'en',
+        includedLanguages: 'en,hi,kn,ml',
+        layout: google.translate.TranslateElement.InlineLayout.SIMPLE
+      }, 'google_translate_element');
+    }
+  </script>
+  <script type="text/javascript"
+    src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+
 </html>
