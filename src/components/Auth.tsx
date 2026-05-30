@@ -47,6 +47,9 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialMode = 'login' }) => {
           if (data.user?.name) {
             localStorage.setItem('fs_user_name', data.user.name);
           }
+          if (data.user?.role) {
+            localStorage.setItem('fs_user_role', data.user.role);
+          }
           onLogin();
         } else {
           setIsLogin(true);

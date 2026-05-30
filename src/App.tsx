@@ -14,12 +14,14 @@ import HowItWorks from './components/HowItWorks';
 import FarmShieldAI from './components/FarmShieldAI';
 import StrategicSidebar from './components/StrategicSidebar';
 import ErrorBoundary from './ErrorBoundary';
+import AdminDashboard from './components/AdminDashboard';
 
-type AppState = 'landing' | 'login' | 'register' | 'dashboard' | 'scanner' | 'advisory' | 'article' | 'how-it-works' | 'features';
+type AppState = 'landing' | 'login' | 'register' | 'dashboard' | 'scanner' | 'advisory' | 'article' | 'how-it-works' | 'features' | 'admin';
 
 function App() {
   const [authState, setAuthState] = useState<AppState>('landing');
   const [isLoggedIn, setIsLoggedIn] = useState(() => localStorage.getItem('fs_logged_in') === 'true');
+  const [isAdmin, setIsAdmin] = useState(() => localStorage.getItem('fs_user_role') === 'admin');
 
   const handleNav = (path: AppState) => {
     setAuthState(path);
@@ -28,13 +30,18 @@ function App() {
 
   const handleLogin = () => {
     setIsLoggedIn(true);
+    setIsAdmin(localStorage.getItem('fs_user_role') === 'admin');
     localStorage.setItem('fs_logged_in', 'true');
     setAuthState('dashboard');
   };
 
   const handleLogout = () => {
     setIsLoggedIn(false);
+    setIsAdmin(false);
     localStorage.removeItem('fs_logged_in');
+    localStorage.removeItem('fs_token');
+    localStorage.removeItem('fs_user_name');
+    localStorage.removeItem('fs_user_role');
     setAuthState('landing');
   };
 
@@ -66,7 +73,7 @@ function App() {
   return (
     <main className="bg-runway-black min-h-screen selection:bg-farm-accent selection:text-black font-sans overflow-x-hidden">
       <ErrorBoundary>
-        <Navbar onNav={handleNav} isLoggedIn={isLoggedIn} onLogout={handleLogout} />
+        <Navbar onNav={handleNav} isLoggedIn={isLoggedIn} isAdmin={isAdmin} onLogout={handleLogout} />
       </ErrorBoundary>
       
       <AnimatePresence mode="wait">
@@ -123,6 +130,12 @@ function App() {
              <InsidePageWrapper>
                 <ErrorBoundary><Features /></ErrorBoundary>
              </InsidePageWrapper>
+          </motion.div>
+        )}
+
+        {authState === 'admin' && isAdmin && (
+          <motion.div key="admin" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+             <ErrorBoundary><AdminDashboard /></ErrorBoundary>
           </motion.div>
         )}
       </AnimatePresence>

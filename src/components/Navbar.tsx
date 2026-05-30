@@ -4,10 +4,11 @@ import { Globe, ChevronDown } from 'lucide-react';
 interface NavbarProps {
   onNav: (path: any) => void;
   isLoggedIn: boolean;
+  isAdmin?: boolean;
   onLogout: () => void;
 }
 
-const Navbar: React.FC<NavbarProps> = ({ onNav, isLoggedIn, onLogout }) => {
+const Navbar: React.FC<NavbarProps> = ({ onNav, isLoggedIn, isAdmin, onLogout }) => {
   const [scrolled, setScrolled] = useState(false);
   const [langMenuOpen, setLangMenuOpen] = useState(false);
 
@@ -100,6 +101,9 @@ const Navbar: React.FC<NavbarProps> = ({ onNav, isLoggedIn, onLogout }) => {
             </>
           ) : (
             <>
+              {isAdmin && (
+                <button onClick={() => onNav('admin')} className="text-[11px] font-bold tracking-[0.2em] text-farm-accent hover:text-white transition-colors">ADMIN</button>
+              )}
               <button onClick={onLogout} className="text-[11px] font-bold tracking-[0.2em] text-white/50 hover:text-danger-red transition-colors">SIGN OUT</button>
               <button onClick={() => onNav('dashboard')} className="bg-farm-accent/20 text-farm-accent border border-farm-accent/30 text-[11px] font-bold tracking-[0.2em] px-8 py-3 rounded-md hover:bg-farm-accent hover:text-black transition-all">DASHBOARD</button>
             </>
