@@ -1,0 +1,23 @@
+# FarmShield AI - Project Synopsis
+
+## Overview
+FarmShield AI is a comprehensive, full-stack agricultural intelligence platform designed to empower farmers by providing advanced, AI-driven tools. The platform seamlessly integrates local machine learning models with state-of-the-art generative AI to deliver robust solutions for crop health, weather forecasting, and strategic farming decisions.
+
+## Key Features
+1. Plant Disease Detection: Utilizes a custom local TensorFlow/Keras Convolutional Neural Network (CNN) to analyze uploaded plant leaf images and accurately identify up to 38 different diseases across various crops.
+2. Pro Diagnosis: Leverages Google's Generative AI (Gemini 1.5 Flash) to provide highly detailed plant health analyses, complete with treatment plans, preventive measures, and recovery estimates.
+3. Smart Weather Advisories: Integrates with the OpenWeatherMap API to deliver localized, real-time weather forecasts and disease risk alerts tailored to current environmental conditions.
+4. Agricultural Assistant: A strategic chat interface offering farmers real-time advice on crop-specific queries, harvest planning, and soil health.
+5. Fertilizer Recommendations: Delivers AI-generated N-P-K (Nitrogen, Phosphorus, Potassium) advice customized for specific crops and soil states.
+6. Market Prices & Government Schemes: Keeps farmers informed with the latest crop market prices and access to vital government agricultural initiatives (e.g., PM-KISAN, PMFBY).
+7. Secure User Management: Features a robust authentication system (JWT & Bcrypt) allowing users to securely save their diagnostic results and track their crop history over time.
+
+## Technology Stack
+- Frontend: Developed with React 19 and Vite for a blazing-fast user experience. Styled using Tailwind CSS v4 and Framer Motion for premium, dynamic animations and a responsive design.
+- Backend: Powered by a Flask (Python) server, managing API requests, AI model serving, and business logic.
+- Database: Uses SQLite via Flask-SQLAlchemy for reliable storage of user profiles and crop histories.
+- AI & Machine Learning: Combines a local TensorFlow/Keras CNN for primary image classification with Google Generative AI (Gemini Pro) for advanced diagnostics and conversational assistance.
+- External Integrations: OpenWeatherMap API for real-time climate data, and secure authentication via Flask-JWT-Extended.
+
+## Conclusion
+FarmShield AI serves as a complete digital companion for modern agriculture. By combining localized machine learning with powerful cloud-based generative AI, the platform addresses critical farming challenges—from early disease detection to strategic crop planning—ultimately aiming to improve crop yields and promote sustainable farming practices.

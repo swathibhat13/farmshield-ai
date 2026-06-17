@@ -14,8 +14,13 @@ from dotenv import load_dotenv
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
+from flask_mail import Mail, Message
+from itsdangerous import URLSafeTimedSerializer
+import datetime as dt_module
+from functools import wraps
 
-load_dotenv()
+basedir = os.path.abspath(os.path.dirname(__file__))
+load_dotenv(os.path.join(basedir, '.env'))
 
 
 # ── Flask App ───────────────────────────────────────
@@ -29,6 +34,15 @@ db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
 jwt = JWTManager(app)
 
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME', 'your@gmail.com')
+app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD', 'your-app-password')
+app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_USERNAME', 'your@gmail.com')
+mail = Mail(app)
+serializer = URLSafeTimedSerializer(app.config['JWT_SECRET_KEY'])
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -37,9 +51,15 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(120), nullable=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
-    password = db.Column(db.String(60), nullable=False)
+    password = db.Column(db.String(60), nullable=True)
     role = db.Column(db.String(20), default='user', nullable=False)
+    is_active = db.Column(db.Boolean, default=True)
+    is_suspended = db.Column(db.Boolean, default=False)
+    last_login = db.Column(db.DateTime)
+    profile_pic = db.Column(db.String(200), default='default.jpg')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    google_id = db.Column(db.String(200), nullable=True)
+    login_method = db.Column(db.String(20), default='email')
 
 class CropHistory(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -50,8 +70,45 @@ class CropHistory(db.Model):
     image_path = db.Column(db.String(255), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+class Alert(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(255), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    type = db.Column(db.String(50), default='info')
+    target = db.Column(db.String(50), default='all')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
 with app.app_context():
     db.create_all()
+    # Create default admin if not exists
+    admin = User.query.filter_by(email='admin@farmshield.com').first()
+    if not admin:
+        hashed_pw = bcrypt.generate_password_hash('admin123').decode('utf-8')
+        admin = User(
+            name='Admin',
+            email='admin@farmshield.com',
+            password=hashed_pw,
+            role='admin'
+        )
+        db.session.add(admin)
+        db.session.commit()
+
+# ── Custom Decorator ──
+def admin_required():
+    def wrapper(fn):
+        @wraps(fn)
+        @jwt_required()
+        def decorator(*args, **kwargs):
+            user_email = get_jwt_identity()
+            user = User.query.filter_by(email=user_email).first()
+            if not user or user.role != 'admin':
+                return jsonify({"success": False, "error": "Access Denied! Admins only."}), 403
+            if user.is_suspended:
+                return jsonify({"success": False, "error": "Your account is suspended!"}), 403
+            return fn(*args, **kwargs)
+        return decorator
+    return wrapper
 
 # ── Config ──────────────────────────────────────────
 IMG_SIZE = 128
@@ -534,6 +591,60 @@ def build_response(class_name, confidence, all_probs):
         "model_version": "CNN-v1"
     }
 
+# ── Alert Routes ────────────────────────────────────
+@app.route("/api/admin/alerts", methods=["POST"])
+@admin_required()
+def create_alert():
+    try:
+        data = request.json
+        alert_type = data.get('type', 'info')
+        title = data.get('title', 'System Alert')
+        message = data.get('message', '')
+        
+        if not message:
+            return jsonify({"success": False, "error": "Message is required"}), 400
+
+        alert = Alert(title=title, message=message, type=alert_type)
+        db.session.add(alert)
+        db.session.commit()
+
+        import threading
+        from flask import current_app
+        app_ctx = current_app.app_context()
+        
+        def send_async_email(ctx, t, m, type_):
+            with ctx:
+                send_alert_email(t, m, type_)
+                
+        threading.Thread(target=send_async_email, args=(app_ctx, title, message, alert_type)).start()
+
+        return jsonify({"success": True, "alert_id": alert.id})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route("/api/admin/alerts", methods=["GET"])
+@admin_required()
+def get_admin_alerts():
+    try:
+        alerts = Alert.query.order_by(Alert.created_at.desc()).limit(50).all()
+        return jsonify({
+            "success": True, 
+            "alerts": [{"id": a.id, "title": a.title, "message": a.message, "type": a.type, "target": a.target, "created_at": a.created_at.strftime('%Y-%m-%d %H:%M:%S')} for a in alerts]
+        })
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route("/api/alerts", methods=["GET"])
+def get_alerts():
+    try:
+        alerts = Alert.query.order_by(Alert.created_at.desc()).limit(10).all()
+        return jsonify({
+            "success": True, 
+            "alerts": [{"id": a.id, "title": a.title, "message": a.message, "type": a.type, "target": a.target, "created_at": a.created_at.strftime('%Y-%m-%d %H:%M:%S')} for a in alerts]
+        })
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
 # ── Root Route ──────────────────────────────────────
 @app.route("/")                          # ← FIXED: Added root route
 def index():
@@ -630,8 +741,11 @@ def predict_pro():
         file = request.files["image"]
         image_bytes = file.read()
         
-        # Convert to PIL for Gemini
+        # Convert to PIL for Gemini and resize to speed up API request
         img = Image.open(io.BytesIO(image_bytes))
+        if img.mode != 'RGB':
+            img = img.convert('RGB')
+        img.thumbnail((512, 512))
         
         prompt = """
         Analyze this plant leaf image. Provide a detailed diagnosis in JSON format:
@@ -646,10 +760,12 @@ def predict_pro():
             "prevention": ["Step 1", "Step 2"],
             "recovery_days": "Estimated time"
         }
-        Only return the JSON object.
         """
 
-        response = gemini_model.generate_content([prompt, img])
+        response = gemini_model.generate_content(
+            [prompt, img],
+            generation_config={"response_mime_type": "application/json"}
+        )
         
         # Save image for history
         image_filename = None
@@ -725,7 +841,133 @@ def chat():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
+# ── Email Templates & Functions ─────────────────────────────────
+def send_welcome_email(user_email, user_name):
+    try:
+        msg = Message(
+            subject='🌿 Welcome to FarmShield AI!',
+            sender=app.config['MAIL_USERNAME'],
+            recipients=[user_email]
+        )
+        msg.html = f'''
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body {{ font-family: 'Segoe UI', sans-serif; background: #f4f4f4; margin: 0; padding: 0; }}
+        .container {{ max-width: 600px; margin: 40px auto; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }}
+        .header {{ background: linear-gradient(135deg, #0a2e1a, #166534); padding: 40px; text-align: center; }}
+        .header h1 {{ color: #4ade80; font-size: 28px; margin: 0; }}
+        .header p {{ color: #86efac; margin: 8px 0 0; font-size: 14px; }}
+        .body {{ padding: 40px; color: #333; }}
+        .greeting {{ font-size: 22px; font-weight: 600; color: #166534; margin-bottom: 16px; }}
+        .message {{ font-size: 15px; line-height: 1.7; color: #555; margin-bottom: 24px; }}
+        .btn {{ display: inline-block; background: #16a34a; color: white; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 15px; margin-bottom: 24px; }}
+        .footer {{ background: #f9fafb; padding: 24px 40px; text-align: center; color: #9ca3af; font-size: 13px; }}
+        .badge {{ display: inline-block; background: #dcfce7; color: #166534; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; margin-bottom: 16px; }}
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>🌿 FarmShield AI</h1>
+        <p>Advanced Agricultural Intelligence</p>
+    </div>
+    <div class="body">
+        <div class="badge">✅ Account Successfully Created</div>
+        <div class="greeting">Welcome, {user_name}! 👋</div>
+        <div class="message">Your FarmShield AI account has been successfully created! You now have access to our advanced AI-powered crop disease detection and weather advisory system.</div>
+        <a href="http://localhost:7777" class="btn">🌿 Go to Dashboard</a>
+    </div>
+    <div class="footer">
+        <p>© 2025 FarmShield AI. All rights reserved.</p>
+    </div>
+</div>
+</body>
+</html>
+'''
+        msg.body = f"Welcome to FarmShield AI, {user_name}!\nYour account has been successfully created.\nVisit: http://localhost:7777\n© 2025 FarmShield AI"
+        mail.send(msg)
+        return True
+    except Exception as e:
+        logger.error(f"Email error: {e}")
+        return False
+
+def send_otp_email(user_email, otp):
+    try:
+        msg = Message(
+            subject='🌿 Your FarmShield AI Login OTP',
+            sender=app.config['MAIL_USERNAME'],
+            recipients=[user_email]
+        )
+        msg.html = f'''
+        <p>Hello,</p>
+        <p>Your One-Time Password (OTP) for FarmShield AI is:</p>
+        <h2 style="background: #f4f4f4; padding: 10px; border-radius: 5px; display: inline-block; letter-spacing: 2px;">{otp}</h2>
+        <p>This OTP is valid for 10 minutes. If you didn't request this, please ignore this email.</p>
+        '''
+        msg.body = f"Your login OTP is: {otp}\nIt is valid for 10 minutes."
+        mail.send(msg)
+        return True
+    except Exception as e:
+        logger.error(f"OTP email error: {e}")
+        return False
+
+def send_alert_email(title, message_text, alert_type):
+    try:
+        users = User.query.filter_by(is_suspended=False).all()
+        recipients = [u.email for u in users if u.email]
+        if not recipients:
+            return True
+
+        msg = Message(
+            subject=f'🔔 FarmShield Alert: {title}',
+            sender=app.config['MAIL_USERNAME'],
+            bcc=recipients
+        )
+        color = "#16a34a" if alert_type == "broadcast" else "#dc2626" if alert_type == "outbreak" else "#ca8a04" if alert_type == "weather" else "#2563eb"
+        msg.html = f'''
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body {{ font-family: 'Segoe UI', sans-serif; background: #f4f4f4; margin: 0; padding: 0; }}
+        .container {{ max-width: 600px; margin: 40px auto; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }}
+        .header {{ background: {color}; padding: 30px; text-align: center; color: white; }}
+        .header h1 {{ font-size: 24px; margin: 0; }}
+        .body {{ padding: 40px; color: #333; }}
+        .message {{ font-size: 16px; line-height: 1.7; color: #555; margin-bottom: 24px; }}
+        .footer {{ background: #f9fafb; padding: 24px 40px; text-align: center; color: #9ca3af; font-size: 13px; }}
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>{title}</h1>
+    </div>
+    <div class="body">
+        <div class="message">{message_text}</div>
+        <a href="http://localhost:7777" style="display:inline-block;background:{color};color:white;padding:12px 24px;border-radius:8px;text-decoration:none;">View Dashboard</a>
+    </div>
+    <div class="footer">
+        <p>© 2026 FarmShield AI. All rights reserved.</p>
+    </div>
+</div>
+</body>
+</html>
+'''
+        msg.body = f"{title}\n\n{message_text}\n\nVisit: http://localhost:7777"
+        mail.send(msg)
+        return True
+    except Exception as e:
+        logger.error(f"Alert email error: {e}")
+        return False
+
 # ── Auth Routes ─────────────────────────────────────
+OTP_STORE = {}
+
 @app.route('/api/auth/register', methods=['POST'])
 def register():
     try:
@@ -741,9 +983,11 @@ def register():
             return jsonify({"success": False, "error": "User already exists"}), 409
 
         hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
-        user = User(name=name, email=email, password=hashed_password)
+        user = User(name=name, email=email, password=hashed_password, login_method='email')
         db.session.add(user)
         db.session.commit()
+        
+        send_welcome_email(email, name or 'User')
 
         return jsonify({"success": True, "message": "Account created successfully"}), 201
     except Exception as e:
@@ -755,10 +999,21 @@ def login():
         data = request.get_json()
         email = data.get('email')
         password = data.get('password')
+        remember = data.get('remember', False)
 
         user = User.query.filter_by(email=email).first()
-        if user and bcrypt.check_password_hash(user.password, password):
-            access_token = create_access_token(identity=user.email)
+        if user and user.login_method == 'google':
+            return jsonify({"success": False, "error": "This account uses Google login. Please use Sign in with Google!"}), 401
+
+        if user and user.password and bcrypt.check_password_hash(user.password, password):
+            if user.is_suspended:
+                return jsonify({"success": False, "error": "Account suspended! Contact admin."}), 403
+                
+            user.last_login = datetime.utcnow()
+            db.session.commit()
+            
+            expires = dt_module.timedelta(days=30) if remember else dt_module.timedelta(hours=1)
+            access_token = create_access_token(identity=user.email, expires_delta=expires)
             return jsonify({
                 "success": True, 
                 "token": access_token,
@@ -768,6 +1023,202 @@ def login():
         return jsonify({"success": False, "error": "Invalid credentials"}), 401
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/auth/otp-request', methods=['POST'])
+def otp_request():
+    try:
+        data = request.get_json()
+        email = data.get('email')
+        if not email:
+            return jsonify({"success": False, "error": "Email required"}), 400
+        
+        user = User.query.filter_by(email=email).first()
+        if not user:
+            return jsonify({"success": False, "error": "No account found with this email"}), 404
+        
+        import random
+        otp = str(random.randint(100000, 999999))
+        print(f"DEBUG: Generated OTP for {email}: {otp}")
+        OTP_STORE[email] = {
+            'otp': otp,
+            'expiry': datetime.utcnow() + dt_module.timedelta(minutes=10)
+        }
+        
+        if send_otp_email(email, otp):
+            return jsonify({"success": True, "message": "OTP sent to your email!"}), 200
+        else:
+            return jsonify({"success": False, "error": "Failed to send email. Check credentials."}), 500
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/auth/otp-verify', methods=['POST'])
+def otp_verify():
+    try:
+        data = request.get_json()
+        email = data.get('email')
+        otp = data.get('otp')
+        
+        if not email or not otp:
+            return jsonify({"success": False, "error": "Email and OTP required"}), 400
+            
+        stored_data = OTP_STORE.get(email)
+        if not stored_data:
+            return jsonify({"success": False, "error": "No OTP requested for this email"}), 400
+            
+        if datetime.utcnow() > stored_data['expiry']:
+            del OTP_STORE[email]
+            return jsonify({"success": False, "error": "OTP has expired"}), 400
+            
+        if stored_data['otp'] != otp:
+            return jsonify({"success": False, "error": "Invalid OTP"}), 401
+            
+        user = User.query.filter_by(email=email).first()
+        if not user:
+            return jsonify({"success": False, "error": "User not found"}), 404
+            
+        if user.is_suspended:
+            return jsonify({"success": False, "error": "Account suspended! Contact admin."}), 403
+            
+        # Clean up OTP after success
+        del OTP_STORE[email]
+            
+        user.last_login = datetime.utcnow()
+        db.session.commit()
+        
+        access_token = create_access_token(identity=user.email, expires_delta=dt_module.timedelta(days=30))
+        return jsonify({
+            "success": True, 
+            "token": access_token,
+            "user": {"email": user.email, "name": user.name, "role": user.role}
+        }), 200
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+from google.oauth2 import id_token
+from google.auth.transport import requests as google_requests
+
+@app.route('/api/auth/google-login', methods=['POST'])
+def google_login():
+    try:
+        data = request.get_json()
+        token = data.get('credential')
+        if not token:
+            return jsonify({"success": False, "error": "No token provided"}), 400
+            
+        client_id = os.getenv('GOOGLE_OAUTH_CLIENT_ID', 'your-google-client-id')
+        try:
+            idinfo = id_token.verify_oauth2_token(token, google_requests.Request(), client_id)
+        except Exception:
+            # Fallback for dev / unconfigured client ID
+            idinfo = id_token.verify_oauth2_token(token, google_requests.Request(), audience=None)
+            
+        email = idinfo['email']
+        name = idinfo.get('name', 'User')
+        picture = idinfo.get('picture', '')
+        google_id = idinfo['sub']
+        
+        user = User.query.filter_by(email=email).first()
+        
+        if user:
+            if not user.google_id:
+                user.google_id = google_id
+                user.login_method = 'google'
+                user.profile_pic = picture
+            if user.is_suspended:
+                return jsonify({"success": False, "error": "Account suspended! Contact admin."}), 403
+        else:
+            user = User(
+                name=name,
+                email=email,
+                password=None,
+                google_id=google_id,
+                profile_pic=picture,
+                login_method='google',
+                role='user'
+            )
+            db.session.add(user)
+            db.session.commit()
+            send_welcome_email(email, name)
+            
+        user.last_login = datetime.utcnow()
+        db.session.commit()
+        
+        expires = dt_module.timedelta(days=30)
+        access_token = create_access_token(identity=user.email, expires_delta=expires)
+        return jsonify({
+            "success": True, 
+            "token": access_token,
+            "user": {"email": user.email, "name": user.name, "role": user.role}
+        }), 200
+    except Exception as e:
+        logger.error(f'Google login error: {str(e)}')
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/auth/forgot-password', methods=['POST'])
+def forgot_password():
+    data = request.get_json()
+    email = data.get('email')
+    user = User.query.filter_by(email=email).first()
+    
+    if user:
+        token = serializer.dumps(email, salt='password-reset')
+        reset_link = f"http://localhost:7777/reset-password?token={token}"
+        msg = Message('FarmShield - Password Reset', sender=app.config['MAIL_USERNAME'], recipients=[email])
+        msg.body = f"Click to reset your password:\n{reset_link}\n\nLink expires in 30 minutes.\nIf you didn't request this, ignore this email."
+        try:
+            mail.send(msg)
+        except Exception as e:
+            logger.error(f"Mail send error: {e}")
+            
+    return jsonify({"success": True, "message": "If email exists, reset link sent!"})
+
+@app.route('/api/auth/reset-password', methods=['POST'])
+def reset_password():
+    data = request.get_json()
+    token = data.get('token')
+    password = data.get('password')
+    
+    try:
+        email = serializer.loads(token, salt='password-reset', max_age=1800)
+    except:
+        return jsonify({"success": False, "error": "Invalid or expired reset link!"}), 400
+        
+    user = User.query.filter_by(email=email).first()
+    if user:
+        user.password = bcrypt.generate_password_hash(password).decode('utf-8')
+        db.session.commit()
+        return jsonify({"success": True, "message": "Password reset successful!"})
+        
+    return jsonify({"success": False, "error": "User not found"}), 404
+
+# ── Admin Routes ────────────────────────────────────
+@app.route('/api/admin/users', methods=['GET'])
+@admin_required()
+def get_users():
+    users = User.query.all()
+    return jsonify({
+        "success": True, 
+        "users": [{
+            "id": u.id, 
+            "name": u.name, 
+            "email": u.email, 
+            "role": u.role, 
+            "is_suspended": u.is_suspended, 
+            "last_login": u.last_login.isoformat() if u.last_login else None
+        } for u in users]
+    })
+
+@app.route('/api/admin/users/<int:user_id>/toggle-suspend', methods=['POST'])
+@admin_required()
+def toggle_suspend(user_id):
+    user = User.query.get(user_id)
+    if user:
+        if user.role == 'admin':
+            return jsonify({"success": False, "error": "Cannot suspend admin"}), 400
+        user.is_suspended = not user.is_suspended
+        db.session.commit()
+        return jsonify({"success": True, "is_suspended": user.is_suspended})
+    return jsonify({"success": False, "error": "User not found"}), 404
 
 
 

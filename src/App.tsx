@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
@@ -16,12 +16,52 @@ import StrategicSidebar from './components/StrategicSidebar';
 import ErrorBoundary from './ErrorBoundary';
 import AdminDashboard from './components/AdminDashboard';
 
-type AppState = 'landing' | 'login' | 'register' | 'dashboard' | 'scanner' | 'advisory' | 'article' | 'how-it-works' | 'features' | 'admin';
+type AppState = 'landing' | 'login' | 'register' | 'dashboard' | 'scanner' | 'advisory' | 'article' | 'how-it-works' | 'features' | 'admin' | 'verify';
 
 function App() {
   const [authState, setAuthState] = useState<AppState>('landing');
   const [isLoggedIn, setIsLoggedIn] = useState(() => localStorage.getItem('fs_logged_in') === 'true');
   const [isAdmin, setIsAdmin] = useState(() => localStorage.getItem('fs_user_role') === 'admin');
+  const [verifyMessage, setVerifyMessage] = useState<string | null>(null);
+
+  // ── Magic Link Token Verification ──────────────────
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token');
+    if (!token) return;
+
+    setAuthState('verify');
+    setVerifyMessage('Verifying your magic link...');
+
+    fetch('http://127.0.0.1:5000/api/auth/magic-link-login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token }),
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          localStorage.setItem('fs_token', data.token);
+          localStorage.setItem('fs_logged_in', 'true');
+          if (data.user?.name) localStorage.setItem('fs_user_name', data.user.name);
+          if (data.user?.role) localStorage.setItem('fs_user_role', data.user.role);
+          window.history.replaceState({}, '', '/');
+          setVerifyMessage('✅ Logged in successfully! Redirecting...');
+          setTimeout(() => {
+            setIsLoggedIn(true);
+            setIsAdmin(localStorage.getItem('fs_user_role') === 'admin');
+            setAuthState('dashboard');
+          }, 1500);
+        } else {
+          setVerifyMessage('❌ ' + (data.error || 'Invalid or expired link. Please request a new one.'));
+          setTimeout(() => setAuthState('login'), 3000);
+        }
+      })
+      .catch(() => {
+        setVerifyMessage('❌ Connection failed. Please try again.');
+        setTimeout(() => setAuthState('login'), 3000);
+      });
+  }, []);
 
   const handleNav = (path: AppState) => {
     setAuthState(path);
@@ -138,7 +178,27 @@ function App() {
              <ErrorBoundary><AdminDashboard /></ErrorBoundary>
           </motion.div>
         )}
+
+        {authState === 'verify' && (
+          <motion.div
+            key="verify"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-xl"
+          >
+            <div className="text-center space-y-6 px-8 max-w-md">
+              <div className="w-16 h-16 bg-farm-accent/20 rounded-2xl flex items-center justify-center text-4xl mx-auto">
+                🌿
+              </div>
+              <div className="w-10 h-10 border-2 border-farm-accent border-t-transparent rounded-full animate-spin mx-auto" />
+              <p className="text-white text-lg font-medium">{verifyMessage || 'Verifying...'}</p>
+              <p className="text-cool-slate text-sm">FarmShield AI — Advanced Agricultural Intelligence</p>
+            </div>
+          </motion.div>
+        )}
       </AnimatePresence>
+
 
       <ErrorBoundary>
         <FarmShieldAI />

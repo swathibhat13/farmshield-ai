@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import DiseaseScanner from './DiseaseScanner';
 import WeatherPanel from './WeatherPanel';
@@ -28,6 +28,25 @@ interface DashboardProps {
 const Dashboard: React.FC<DashboardProps> = ({ onArticleClick: externalOnArticleClick }) => {
   const userName = localStorage.getItem('fs_user_name') || 'Commander';
   const [selectedArticle, setSelectedArticle] = useState<any>(null);
+  const [alerts, setAlerts] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchAlerts = async () => {
+      try {
+        const res = await fetch('http://127.0.0.1:5000/api/alerts');
+        const data = await res.json();
+        if (data.success) {
+          setAlerts(data.alerts);
+        }
+      } catch (err) {
+        console.error('Failed to fetch alerts', err);
+      }
+    };
+    fetchAlerts();
+    const timer = setInterval(fetchAlerts, 30000);
+    return () => clearInterval(timer);
+  }, []);
+
   const stats = [
     { label: 'System Integrity', value: '99.8%', trend: '+0.2%', icon: Cpu, color: 'text-farm-accent' },
     { label: 'Global Risk Index', value: 'Low', trend: 'Stable', icon: ShieldCheck, color: 'text-healthy-emerald' },
@@ -164,16 +183,15 @@ const Dashboard: React.FC<DashboardProps> = ({ onArticleClick: externalOnArticle
                 <span className="text-white/20 text-[10px] font-bold">LIVE</span>
               </div>
               <div className="space-y-4">
-                {[
-                  { msg: 'System calibrated for high humidity zones.', time: '2m ago', type: 'info' },
-                  { msg: 'Gemini 1.5 Pro AI engine online.', time: '12m ago', type: 'success' },
-                  { msg: 'Atmospheric risk in Pune region: Moderate.', time: '45m ago', type: 'warning' },
-                ].map((alert, i) => (
-                  <div key={i} className="flex justify-between items-start py-4 border-b border-white/5 last:border-0">
-                    <p className="text-[13px] text-white/80 font-medium">{alert.msg}</p>
-                    <span className="text-[10px] text-white/20 font-bold whitespace-nowrap ml-4">{alert.time}</span>
+                {alerts.length > 0 ? alerts.map((alert, i) => (
+                  <div key={i} className="flex justify-between items-start py-4 border-b border-white/5 last:border-0 flex-col sm:flex-row gap-2">
+                    <div>
+                      <div className={`text-[11px] font-bold uppercase tracking-wider mb-1 ${alert.type === 'weather' ? 'text-yellow-400' : alert.type === 'outbreak' ? 'text-red-400' : alert.type === 'broadcast' ? 'text-healthy-emerald' : 'text-blue-400'}`}>{alert.title}</div>
+                      <p className="text-[13px] text-white/80 font-medium">{alert.message}</p>
+                    </div>
+                    <span className="text-[10px] text-white/20 font-bold whitespace-nowrap sm:ml-4">{alert.created_at}</span>
                   </div>
-                ))}
+                )) : <div className="text-white/40 text-sm py-4">No real-time alerts at this moment.</div>}
               </div>
             </div>
           </div>

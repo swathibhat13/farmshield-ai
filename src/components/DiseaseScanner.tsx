@@ -106,7 +106,7 @@ const DiseaseScanner: React.FC = () => {
       if (!data.success) throw new Error(data.error || "Analysis failed");
 
       // Ensure scanning effect lasts a bit for immersion
-      await new Promise(r => setTimeout(r, 1000));
+      // await new Promise(r => setTimeout(r, 1000));
 
       setResult({
         crop: data.crop_type || "Unknown",
@@ -227,7 +227,7 @@ const DiseaseScanner: React.FC = () => {
       </div>
 
       {/* ── RIGHT: Live Diagnostic Feed ── */}
-      <div className="lg:w-1/2 bg-black/40 backdrop-blur-3xl border border-white/10 rounded-[32px] p-10 flex flex-col min-h-[500px]">
+      <div className="lg:w-1/2 bg-black/40 backdrop-blur-3xl border border-white/10 rounded-[32px] p-10 flex flex-col min-h-[500px] max-h-[850px] overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-white/10 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full">
         <AnimatePresence mode="wait">
           
           {scanning ? (
@@ -310,17 +310,59 @@ const DiseaseScanner: React.FC = () => {
                 </div>
               </div>
 
+              {result.name !== "Unknown" && (
+                <div className="bg-white/5 p-6 rounded-2xl border border-white/5 flex flex-col gap-4">
+                  <div>
+                    <div className="text-farm-accent text-[10px] uppercase font-bold tracking-widest mb-2 opacity-50">Clinical Description</div>
+                    <p className="text-white/80 text-[13px] leading-relaxed">{result.desc}</p>
+                  </div>
+                  
+                  <div className="grid grid-cols-3 gap-4 border-t border-white/10 pt-4 mt-2">
+                    <div>
+                      <div className="text-farm-accent text-[10px] uppercase font-bold tracking-widest mb-1 opacity-50">Severity</div>
+                      <div className={`text-[12px] font-bold uppercase tracking-wider ${result.severity === 'critical' ? 'text-red-500' : result.severity === 'high' ? 'text-orange-500' : result.severity === 'medium' ? 'text-yellow-500' : 'text-healthy-emerald'}`}>
+                        {result.severity}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-farm-accent text-[10px] uppercase font-bold tracking-widest mb-1 opacity-50">Pathogen</div>
+                      <div className="text-white/80 text-[12px] italic">{result.pathogen || 'N/A'}</div>
+                    </div>
+                    <div>
+                      <div className="text-farm-accent text-[10px] uppercase font-bold tracking-widest mb-1 opacity-50">Recovery</div>
+                      <div className="text-white/80 text-[12px]">{result.timeline || 'N/A'}</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="bg-gradient-to-br from-white/[0.03] to-transparent p-8 rounded-[32px] border border-white/5">
                 <div className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-6">Strategic Treatment Protocol</div>
                 <div className="space-y-4">
-                  {result.treatment.slice(0, 2).map((t, i) => (
-                    <div key={i} className="flex gap-5 p-5 bg-black/40 rounded-2xl border border-white/5">
+                  {result.treatment && result.treatment.length > 0 ? result.treatment.map((t, i) => (
+                    <div key={i} className="flex gap-5 p-5 bg-black/40 rounded-2xl border border-white/5 items-center">
                       <span className="text-3xl grayscale-[0.5]">{t.icon}</span>
                       <p className="text-[13px] text-white/70 leading-relaxed font-bold">{t.text}</p>
                     </div>
-                  ))}
+                  )) : (
+                    <div className="text-white/50 text-[13px]">No treatment required. Continue regular monitoring.</div>
+                  )}
                 </div>
               </div>
+
+              {result.prevention && result.prevention.length > 0 && (
+                <div className="bg-gradient-to-br from-white/[0.03] to-transparent p-8 rounded-[32px] border border-white/5">
+                  <div className="text-[10px] font-bold text-white/40 uppercase tracking-widest mb-6">Preventative Measures</div>
+                  <div className="space-y-3">
+                    {result.prevention.map((p, i) => (
+                      <div key={i} className="flex gap-4 items-center bg-black/20 p-4 rounded-xl border border-white/5">
+                        <Shield className="w-5 h-5 text-farm-accent opacity-70 flex-shrink-0" />
+                        <span className="text-[13px] text-white/70 font-medium leading-relaxed">{p.text}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <button onClick={() => window.print()} className="w-full bg-white/5 hover:bg-white/10 text-white/60 font-bold py-5 rounded-2xl border border-white/5 transition-all flex items-center justify-center gap-3 uppercase text-[10px] tracking-widest mt-auto">
                 <Download className="w-4 h-4" /> Download Intelligence Log

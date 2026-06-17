@@ -97,6 +97,7 @@ const AdminDashboard: React.FC = () => {
   const [users, setUsers] = useState<any[]>([]);
   const [detections, setDetections] = useState<any[]>([]);
   const [logs, setLogs] = useState<any[]>([]);
+  const [alerts, setAlerts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [confirm, setConfirm] = useState<any>(null);
@@ -190,6 +191,14 @@ const AdminDashboard: React.FC = () => {
     } catch { toast('Failed to load logs', 'error'); }
   }, []);
 
+  const fetchAlerts = useCallback(async () => {
+    try {
+      const r = await fetch(`${API}/api/admin/alerts`, { headers: authHeaders() });
+      const d = await r.json();
+      if (d.success) setAlerts(d.alerts);
+    } catch { toast('Failed to load alerts', 'error'); }
+  }, []);
+
   useEffect(() => {
     const load = async () => {
       setLoading(true);
@@ -197,11 +206,12 @@ const AdminDashboard: React.FC = () => {
       if (activeTab === 'users') await fetchUsers();
       if (activeTab === 'detections') await fetchDetections();
       if (activeTab === 'logs') await fetchLogs();
+      if (activeTab === 'notifications') await fetchAlerts();
       setLoading(false);
       setLastRefreshed(0);
     };
     load();
-  }, [activeTab, fetchStats, fetchUsers, fetchDetections, fetchLogs]);
+  }, [activeTab, fetchStats, fetchUsers, fetchDetections, fetchLogs, fetchAlerts]);
 
   useEffect(() => {
     const timer = setInterval(() => setLastRefreshed(r => r + 1), 1000);
@@ -214,10 +224,11 @@ const AdminDashboard: React.FC = () => {
       if (activeTab === 'users') await fetchUsers();
       if (activeTab === 'detections') await fetchDetections();
       if (activeTab === 'logs') await fetchLogs();
+      if (activeTab === 'notifications') await fetchAlerts();
       setLastRefreshed(0);
     }, 30000);
     return () => clearInterval(fetcher);
-  }, [activeTab, fetchStats, fetchUsers, fetchDetections, fetchLogs]);
+  }, [activeTab, fetchStats, fetchUsers, fetchDetections, fetchLogs, fetchAlerts]);
 
   useEffect(() => {
     if (activeTab === 'detections') { setDetPage(1); fetchDetections(); }
@@ -228,6 +239,21 @@ const AdminDashboard: React.FC = () => {
     await fetch(`${API}/api/admin/users/${uid}/role`, { method: 'PUT', headers: authHeaders(), body: JSON.stringify({ role: nr }) });
     toast(`Role updated to ${nr}`);
     fetchUsers();
+  };
+
+  const toggleSuspend = async (uid: number) => {
+    try {
+      const res = await fetch(`${API}/api/admin/users/${uid}/toggle-suspend`, { method: 'POST', headers: authHeaders() });
+      const data = await res.json();
+      if (data.success) {
+        toast(`User ${data.is_suspended ? 'suspended' : 'unsuspended'}`);
+        fetchUsers();
+      } else {
+        toast(data.error || 'Failed to toggle suspension', 'error');
+      }
+    } catch (err) {
+      toast('Network error', 'error');
+    }
   };
 
   const deleteUser = (u: any) => {
@@ -241,6 +267,59 @@ const AdminDashboard: React.FC = () => {
         setConfirm(null);
       },
     });
+  };
+
+  const handleSendBroadcast = async () => {
+    if (!broadcastMsg.trim()) return;
+    try {
+      const res = await fetch(`${API}/api/admin/alerts`, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ type: 'broadcast', title: 'Broadcast Message', message: broadcastMsg })
+      });
+      if (res.ok) {
+        setBroadcastSent(true);
+        setBroadcastMsg('');
+        toast('Broadcast sent to all users!');
+        fetchAlerts();
+        setTimeout(() => setBroadcastSent(false), 3000);
+      } else {
+        toast('Failed to send broadcast', 'error');
+      }
+    } catch {
+      toast('Network error', 'error');
+    }
+  };
+
+  const handleCreateSystemAlert = async () => {
+    let title = 'System Alert';
+    let message = '';
+    if (alertType === 'outbreak') {
+      title = '🦠 Disease Outbreak Alert';
+      message = 'A disease outbreak has been reported in your region. Please take precautions.';
+    } else if (alertType === 'weather') {
+      title = '⛈️ Weather Warning';
+      message = 'Adverse weather conditions expected. Please secure your crops.';
+    } else if (alertType === 'system') {
+      title = '⚙️ System Maintenance';
+      message = 'Upcoming system maintenance. The platform may be unavailable.';
+    }
+
+    try {
+      const res = await fetch(`${API}/api/admin/alerts`, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ type: alertType, title, message })
+      });
+      if (res.ok) {
+        toast(`${alertType} alert created and queued!`);
+        fetchAlerts();
+      } else {
+        toast('Failed to create alert', 'error');
+      }
+    } catch {
+      toast('Network error', 'error');
+    }
   };
 
   // ── Export CSV/PDF ──────────────────────────────────────
@@ -505,9 +584,16 @@ const AdminDashboard: React.FC = () => {
                           </td>
                           <td className="px-5 py-3.5 text-cool-slate">{u.email}</td>
                           <td className="px-5 py-3.5">
-                            <span className={`px-2.5 py-1 rounded-full text-xs font-medium border ${u.role === 'admin' ? 'bg-farm-accent/15 text-farm-accent border-farm-accent/30' : 'bg-white/5 text-white/60 border-white/10'}`}>
-                              {u.role}
-                            </span>
+                            <div className="flex flex-col gap-1.5 items-start">
+                              <span className={`px-2.5 py-1 rounded-full text-[10px] uppercase tracking-wider font-medium border ${u.role === 'admin' ? 'bg-farm-accent/15 text-farm-accent border-farm-accent/30' : 'bg-white/5 text-white/60 border-white/10'}`}>
+                                {u.role}
+                              </span>
+                              {u.is_suspended && (
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-medium border bg-red-500/15 text-red-400 border-red-500/30">
+                                  Suspended
+                                </span>
+                              )}
+                            </div>
                           </td>
                           <td className="px-5 py-3.5 font-medium">{u.total_detections}</td>
                           <td className="px-5 py-3.5 text-cool-slate">{u.created_at}</td>
@@ -522,6 +608,11 @@ const AdminDashboard: React.FC = () => {
                                 title={u.role === 'admin' ? 'Demote to user' : 'Promote to admin'}
                                 className="p-1.5 hover:bg-farm-accent/10 rounded-lg transition-colors text-farm-accent">
                                 {u.role === 'admin' ? <ToggleRight className="w-4 h-4" /> : <ToggleLeft className="w-4 h-4" />}
+                              </button>
+                              <button onClick={() => toggleSuspend(u.id)}
+                                title={u.is_suspended ? 'Unsuspend User' : 'Suspend User'}
+                                className="p-1.5 hover:bg-orange-500/10 rounded-lg transition-colors text-orange-400">
+                                {u.is_suspended ? <Shield className="w-4 h-4" /> : <ShieldAlert className="w-4 h-4" />}
                               </button>
                               <button onClick={() => deleteUser(u)}
                                 className="p-1.5 hover:bg-red-500/10 rounded-lg transition-colors text-red-400">
@@ -788,7 +879,7 @@ const AdminDashboard: React.FC = () => {
                   <textarea value={broadcastMsg} onChange={e => setBroadcastMsg(e.target.value)}
                     placeholder="Type your message here..."
                     rows={4} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:border-farm-accent outline-none resize-none mb-3" />
-                  <button onClick={() => { if (!broadcastMsg.trim()) return; setBroadcastSent(true); setBroadcastMsg(''); toast('Broadcast sent to all users!'); setTimeout(() => setBroadcastSent(false), 3000); }}
+                  <button onClick={handleSendBroadcast}
                     className="flex items-center gap-2 px-5 py-2.5 bg-farm-accent text-black font-semibold text-sm rounded-lg hover:bg-farm-accent/90 transition-colors">
                     <Send className="w-4 h-4" /> Send Broadcast
                   </button>
@@ -814,7 +905,7 @@ const AdminDashboard: React.FC = () => {
                       </button>
                     ))}
                   </div>
-                  <button onClick={() => toast(`${alertType} alert created and queued!`)}
+                  <button onClick={handleCreateSystemAlert}
                     className="px-5 py-2.5 bg-warning-amber text-black font-semibold text-sm rounded-lg hover:bg-warning-amber/90 transition-colors">
                     Create Alert
                   </button>
@@ -824,22 +915,18 @@ const AdminDashboard: React.FC = () => {
                 <div className="bg-white/[0.03] border border-white/10 rounded-xl p-6">
                   <h3 className="text-base font-medium mb-4">Recent System Alerts</h3>
                   <div className="space-y-3">
-                    {[
-                      { title: 'Heavy Rain Warning', time: 'Today 09:12', type: 'weather', to: 'All Users' },
-                      { title: 'Tomato Blight Outbreak Detected', time: 'Yesterday 14:30', type: 'outbreak', to: 'All Users' },
-                      { title: 'Scheduled Maintenance Notice', time: '2 days ago', type: 'system', to: 'All Users' },
-                    ].map((n, i) => (
+                    {alerts.length > 0 ? alerts.map((n, i) => (
                       <div key={i} className="flex items-center justify-between py-3 border-b border-white/5 last:border-0">
                         <div className="flex items-center gap-3">
-                          <div className={`w-2 h-2 rounded-full ${n.type === 'weather' ? 'bg-yellow-400' : n.type === 'outbreak' ? 'bg-red-400' : 'bg-blue-400'}`} />
+                          <div className={`w-2 h-2 rounded-full ${n.type === 'weather' ? 'bg-yellow-400' : n.type === 'outbreak' ? 'bg-red-400' : n.type === 'broadcast' ? 'bg-healthy-emerald' : 'bg-blue-400'}`} />
                           <div>
                             <div className="text-sm font-medium">{n.title}</div>
-                            <div className="text-cool-slate text-xs">Sent to {n.to}</div>
+                            <div className="text-cool-slate text-xs">Sent to {n.target}</div>
                           </div>
                         </div>
-                        <span className="text-cool-slate text-xs">{n.time}</span>
+                        <span className="text-cool-slate text-xs">{n.created_at}</span>
                       </div>
-                    ))}
+                    )) : <div className="text-cool-slate text-sm">No recent alerts.</div>}
                   </div>
                 </div>
 
