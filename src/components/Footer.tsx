@@ -1,10 +1,32 @@
-
+import React, { useState } from 'react';
 
 interface FooterProps {
   onNav: (path: any) => void;
 }
 
 const Footer: React.FC<FooterProps> = ({ onNav }) => {
+  const [email, setEmail] = useState('');
+  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+
+  const handleJoin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) return;
+    
+    setStatus('loading');
+    
+    // Simulate an API call
+    setTimeout(() => {
+      if (email.includes('@')) {
+        setStatus('success');
+        setEmail('');
+        setTimeout(() => setStatus('idle'), 3000); // Reset after 3 seconds
+      } else {
+        setStatus('error');
+        setTimeout(() => setStatus('idle'), 3000);
+      }
+    }, 1000);
+  };
+
   return (
     <footer className="bg-black border-t border-border-dark py-24 px-6 md:px-10">
       <div className="max-w-7xl mx-auto grid md:grid-cols-2 lg:grid-cols-4 gap-12 mb-24">
@@ -44,14 +66,31 @@ const Footer: React.FC<FooterProps> = ({ onNav }) => {
           <h4 className="text-white text-[11px] font-bold uppercase tracking-[0.2em] mb-8">Stay Connected</h4>
           <div className="flex flex-col gap-6">
              <p className="text-cool-slate text-sm">Join our newsletter for weekly insights into AI-driven agriculture.</p>
-             <div className="flex gap-2">
-                <input 
-                  type="email" 
-                  placeholder="Email address" 
-                  className="bg-white/5 border border-border-dark px-4 py-3 text-sm text-white focus:outline-none focus:border-farm-accent flex-grow rounded-sm"
-                />
-                <button className="px-5 py-3 bg-farm-accent text-black text-[13px] font-bold uppercase tracking-wider rounded-sm">Join</button>
-             </div>
+             <form onSubmit={handleJoin} className="flex flex-col gap-2">
+                <div className="flex gap-2">
+                  <input 
+                    type="email" 
+                    placeholder="Email address" 
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    disabled={status === 'loading' || status === 'success'}
+                    className="bg-white/5 border border-border-dark px-4 py-3 text-sm text-white focus:outline-none focus:border-farm-accent flex-grow rounded-sm disabled:opacity-50"
+                  />
+                  <button 
+                    type="submit" 
+                    disabled={status === 'loading' || status === 'success'}
+                    className="px-5 py-3 bg-farm-accent text-black text-[13px] font-bold uppercase tracking-wider rounded-sm disabled:opacity-50 transition-colors"
+                  >
+                    {status === 'loading' ? '...' : status === 'success' ? '✓' : 'Join'}
+                  </button>
+                </div>
+                {status === 'success' && (
+                  <p className="text-farm-accent text-xs">Successfully joined the newsletter!</p>
+                )}
+                {status === 'error' && (
+                  <p className="text-red-500 text-xs">Please enter a valid email address.</p>
+                )}
+             </form>
           </div>
         </div>
       </div>

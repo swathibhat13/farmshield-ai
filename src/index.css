@@ -173,3 +173,5 @@
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: rgba(82, 183, 136, 0.5);
 }
+
+@custom-variant dark (&:is(.dark *));

@@ -76,13 +76,14 @@ const DiseaseScanner: React.FC = () => {
     setScanning(true);
     setCurrentStage(0);
 
-    // Simulate stage progress visually
+    // Simulate stage progress visually — advances quickly while API call runs in parallel
     const stageInterval = setInterval(() => {
       setCurrentStage(prev => {
         if (prev < SCAN_STAGES.length - 1) return prev + 1;
+        clearInterval(stageInterval);  // stop at last stage
         return prev;
       });
-    }, 1200);
+    }, 600);
 
     try {
       const formData = new FormData();
@@ -100,10 +101,16 @@ const DiseaseScanner: React.FC = () => {
       const endpoint = proMode ? `${API_BASE}/predict-pro` : `${API_BASE}/predict`;
       const response = await fetch(endpoint, { method: 'POST', body: formData });
       
-      if (!response.ok) throw new Error(`Neural engine offline (Status ${response.status})`);
+      let data;
+      try {
+        data = await response.json();
+      } catch (e) {
+        throw new Error(`Neural engine offline (Status ${response.status})`);
+      }
 
-      const data = await response.json();
-      if (!data.success) throw new Error(data.error || "Analysis failed");
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || `Analysis failed (Status ${response.status})`);
+      }
 
       // Ensure scanning effect lasts a bit for immersion
       // await new Promise(r => setTimeout(r, 1000));

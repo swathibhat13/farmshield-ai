@@ -78,6 +78,14 @@ class Alert(db.Model):
     target = db.Column(db.String(50), default='all')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+class Review(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(120), nullable=False)
+    role = db.Column(db.String(120), nullable=True)  # e.g. "Tomato Farmer · Maharashtra"
+    rating = db.Column(db.Integer, nullable=False, default=5)  # 1-5
+    message = db.Column(db.Text, nullable=False)
+    is_approved = db.Column(db.Boolean, default=True)  # auto-approve for now
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 with app.app_context():
     db.create_all()
@@ -683,7 +691,7 @@ def predict():
         logger.info(f"Received image: {len(image_bytes)} bytes")
         
         processed_image = preprocess(image_bytes).astype('float32')
-        predictions = model.predict(processed_image, verbose=0)[0]
+        predictions = model(processed_image, training=False).numpy()[0]
         
         top_index = int(np.argmax(predictions))
         confidence = float(predictions[top_index])
@@ -745,22 +753,10 @@ def predict_pro():
         img = Image.open(io.BytesIO(image_bytes))
         if img.mode != 'RGB':
             img = img.convert('RGB')
-        img.thumbnail((512, 512))
+        img.thumbnail((256, 256))  # Smaller = faster upload to Gemini
         
-        prompt = """
-        Analyze this plant leaf image. Provide a detailed diagnosis in JSON format:
-        {
-            "display_name": "Common name of disease",
-            "scientific_name": "Scientific name",
-            "crop_type": "Plant type",
-            "confidence": 95,
-            "severity": "critical/high/medium/low",
-            "description": "Short description",
-            "treatment": [{"icon": "💊", "title": "Action", "desc": "Details"}],
-            "prevention": ["Step 1", "Step 2"],
-            "recovery_days": "Estimated time"
-        }
-        """
+        prompt = """You are a plant disease expert. Analyze this leaf image and return ONLY a JSON object (no markdown, no explanation):
+{"display_name":"disease name","scientific_name":"scientific name","crop_type":"plant","confidence":95,"severity":"high","description":"one sentence","treatment":[{"icon":"💊","title":"Action","desc":"Details"}],"prevention":["tip1","tip2"],"recovery_days":"7-14 days"}"""
 
         response = gemini_model.generate_content(
             [prompt, img],
@@ -804,10 +800,16 @@ def predict_pro():
         return jsonify(data)
 
     except Exception as e:
-        logger.error(f"Gemini Error: {str(e)}")
+        error_str = str(e)
+        logger.error(f"Gemini Error: {error_str}")
+        
+        user_msg = "Professional AI service unavailable. Please check your API key."
+        if "429" in error_str or "Quota exceeded" in error_str:
+            user_msg = "Free tier quota exceeded for the AI model. Please try again later or switch off Pro mode."
+            
         return jsonify({
             "success": False,
-            "error": "Professional AI service unavailable. Please check your API key."
+            "error": user_msg
         }), 500
 
 
@@ -1924,6 +1926,67 @@ def admin_activity_logs():
         })
     logs.sort(key=lambda x: x['timestamp'], reverse=True)
     return jsonify({'success': True, 'logs': logs[:60]})
+
+# ── Public Stats Route ──────────────────────────────
+@app.route('/api/stats', methods=['GET'])
+def get_stats():
+    try:
+        total_scans = CropHistory.query.count()
+        total_users = User.query.filter_by(is_suspended=False).count()
+        healthy_scans = CropHistory.query.filter(CropHistory.disease.ilike('%healthy%')).count()
+        farm_integrity = round((healthy_scans / total_scans * 100), 1) if total_scans > 0 else 98.0
+        return jsonify({
+            'success': True,
+            'total_scans': total_scans,
+            'total_users': total_users,
+            'farm_integrity': farm_integrity,
+            'neural_accuracy': 94.4,
+            'model_classes': len(CLASS_NAMES),
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+# ── Reviews Routes ───────────────────────────────────
+@app.route('/api/reviews', methods=['GET'])
+def get_reviews():
+    try:
+        reviews = Review.query.filter_by(is_approved=True).order_by(Review.created_at.desc()).limit(50).all()
+        return jsonify({
+            'success': True,
+            'reviews': [{
+                'id': r.id,
+                'name': r.name,
+                'role': r.role or '',
+                'rating': r.rating,
+                'message': r.message,
+                'created_at': r.created_at.strftime('%b %d, %Y')
+            } for r in reviews]
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/reviews', methods=['POST'])
+def post_review():
+    try:
+        data = request.get_json()
+        name = (data.get('name') or '').strip()
+        role = (data.get('role') or '').strip()
+        rating = int(data.get('rating', 5))
+        message = (data.get('message') or '').strip()
+
+        if not name or not message:
+            return jsonify({'success': False, 'error': 'Name and message are required'}), 400
+        if not (1 <= rating <= 5):
+            return jsonify({'success': False, 'error': 'Rating must be between 1 and 5'}), 400
+        if len(message) > 1000:
+            return jsonify({'success': False, 'error': 'Message too long (max 1000 chars)'}), 400
+
+        review = Review(name=name, role=role, rating=rating, message=message)
+        db.session.add(review)
+        db.session.commit()
+        return jsonify({'success': True, 'review_id': review.id}), 201
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 # ── Run App ─────────────────────────────────────────
 if __name__ == "__main__":

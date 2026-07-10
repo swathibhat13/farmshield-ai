@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Eye, EyeOff, User, Mail, Lock, AlertCircle } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Eye, EyeOff, User, Mail, Lock, AlertCircle, CheckCircle2, XCircle } from 'lucide-react';
 
 interface AuthProps {
   onLogin: () => void;
@@ -26,8 +26,42 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialMode = 'login' }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setError(null);
+
+    // Form Validation
+    if (!isLogin && !isForgotPassword) {
+      if (!formData.name.trim()) {
+        setError("Full name is required");
+        return;
+      }
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      setError("Please enter a valid email address");
+      return;
+    }
+
+    if (!isForgotPassword && !(isLogin && useOtp)) {
+      const pwChecks = getPasswordChecks(formData.password);
+      if (!isLogin && !Object.values(pwChecks).every(Boolean)) {
+        setError("Password does not meet all requirements");
+        return;
+      }
+      if (isLogin && formData.password.length < 6) {
+        setError("Password must be at least 6 characters long");
+        return;
+      }
+    }
+
+    if (isLogin && useOtp && showOtpInput) {
+      if (otpCode.length !== 6 || !/^\d{6}$/.test(otpCode)) {
+        setError("Please enter a valid 6-digit OTP");
+        return;
+      }
+    }
+
+    setLoading(true);
 
     const baseUrl = 'http://127.0.0.1:5000';
 
@@ -144,6 +178,19 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialMode = 'login' }) => {
     }
   };
 
+  const getPasswordChecks = (pw: string) => ({
+    length: pw.length >= 8,
+    uppercase: /[A-Z]/.test(pw),
+    lowercase: /[a-z]/.test(pw),
+    number: /[0-9]/.test(pw),
+    special: /[^A-Za-z0-9]/.test(pw),
+  });
+
+  const pwChecks = getPasswordChecks(formData.password);
+  const pwStrength = Object.values(pwChecks).filter(Boolean).length;
+  const strengthLabel = ['', 'Weak', 'Weak', 'Fair', 'Good', 'Strong'][pwStrength];
+  const strengthColor = ['', '#ef4444', '#ef4444', '#f59e0b', '#3b82f6', '#22c55e'][pwStrength];
+
   return (
     <div className="relative min-h-screen w-full flex items-center justify-center overflow-hidden bg-runway-black">
       {/* Cinematic Background */}
@@ -194,6 +241,8 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialMode = 'login' }) => {
               <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-cool-slate" />
               <input
                 type="text"
+                required
+                title="Please fill out this field."
                 placeholder="Full Name"
                 className="w-full bg-white/5 border border-white/10 rounded-lg py-3.5 pl-12 pr-4 text-white placeholder:text-cool-slate/50 focus:border-farm-accent transition-all outline-none"
                 value={formData.name}
@@ -215,23 +264,69 @@ const Auth: React.FC<AuthProps> = ({ onLogin, initialMode = 'login' }) => {
           </div>
 
           {!isForgotPassword && !(isLogin && useOtp) && (
-            <div className="relative">
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-cool-slate" />
-              <input
-                type={showPassword ? 'text' : 'password'}
-                required
-                placeholder="Password"
-                className="w-full bg-white/5 border border-white/10 rounded-lg py-3.5 pl-12 pr-12 text-white placeholder:text-cool-slate/50 focus:border-farm-accent transition-all outline-none"
-                value={formData.password}
-                onChange={e => setFormData({ ...formData, password: e.target.value })}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-cool-slate hover:text-white transition-colors"
-              >
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
+            <div className="space-y-3">
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-cool-slate" />
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  placeholder="Password"
+                  className="w-full bg-white/5 border border-white/10 rounded-lg py-3.5 pl-12 pr-12 text-white placeholder:text-cool-slate/50 focus:border-farm-accent transition-all outline-none"
+                  value={formData.password}
+                  onChange={e => setFormData({ ...formData, password: e.target.value })}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-cool-slate hover:text-white transition-colors"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+
+              {/* Password Strength — only show on register */}
+              <AnimatePresence>
+                {!isLogin && formData.password.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="bg-white/3 border border-white/8 rounded-lg p-4 space-y-3"
+                  >
+                    {/* Strength bar */}
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[11px] text-cool-slate uppercase tracking-widest font-bold">Strength</span>
+                      <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: strengthColor }}>{strengthLabel}</span>
+                    </div>
+                    <div className="flex gap-1">
+                      {[1,2,3,4,5].map(i => (
+                        <div
+                          key={i}
+                          className="h-1 flex-1 rounded-full transition-all duration-300"
+                          style={{ backgroundColor: pwStrength >= i ? strengthColor : 'rgba(255,255,255,0.1)' }}
+                        />
+                      ))}
+                    </div>
+                    {/* Requirement checks */}
+                    <div className="grid grid-cols-1 gap-1.5 pt-1">
+                      {([
+                        [pwChecks.length,    '8+ characters'],
+                        [pwChecks.uppercase, 'Uppercase letter (A–Z)'],
+                        [pwChecks.lowercase, 'Lowercase letter (a–z)'],
+                        [pwChecks.number,    'At least one number (0–9)'],
+                        [pwChecks.special,   'Special character (!@#$...)'],
+                      ] as [boolean, string][]).map(([ok, label]) => (
+                        <div key={label} className="flex items-center gap-2">
+                          {ok
+                            ? <CheckCircle2 size={13} className="text-green-400 shrink-0" />
+                            : <XCircle      size={13} className="text-white/20 shrink-0" />}
+                          <span className={`text-[12px] transition-colors ${ok ? 'text-white/80' : 'text-cool-slate/50'}`}>{label}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           )}
 

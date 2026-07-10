@@ -130,7 +130,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onArticleClick: externalOnArticle
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-10">
           
           {/* Left: Disease Scanner Hub */}
-          <div className="xl:col-span-7">
+          <div className="xl:col-span-7" data-section="scanner">
             <div className="relative group">
               <div className="absolute -inset-1 bg-gradient-to-r from-farm-accent/20 to-transparent rounded-[32px] blur-xl opacity-0 group-hover:opacity-100 transition duration-1000" />
               <div className="relative bg-black/40 backdrop-blur-3xl border border-white/10 rounded-[32px] overflow-hidden">
@@ -166,7 +166,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onArticleClick: externalOnArticle
                 </p>
               </div>
               <button 
-                onClick={() => window.scrollTo({ top: 1200, behavior: 'smooth' })}
+                onClick={() => {
+                  const el = document.querySelector('[data-section="advisory"]') as HTMLElement | null;
+                  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }}
                 className="w-full bg-farm-accent text-black font-bold py-5 rounded-2xl hover:scale-[1.02] transition-all uppercase tracking-widest text-[11px] flex items-center justify-center gap-3 mt-8 shadow-2xl shadow-farm-accent/20"
               >
                 Launch Intelligence Report <TrendingUp className="w-4 h-4" />
@@ -207,7 +210,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onArticleClick: externalOnArticle
           </div>
 
           {/* Full Width Bottom: Strategic Advisory Hub */}
-          <div className="xl:col-span-12 mt-10">
+          <div className="xl:col-span-12 mt-10" data-section="advisory">
             <div className="bg-black/40 backdrop-blur-3xl border border-white/10 rounded-[40px] overflow-hidden">
                <div className="p-12 border-b border-white/5">
                   <div className="flex items-center gap-4 mb-4">

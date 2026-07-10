@@ -39,16 +39,16 @@ const ToastContainer = ({ toasts, remove }: { toasts: Toast[]; remove: (id: numb
 const ConfirmDialog = ({ open, title, message, onConfirm, onCancel }: any) => {
   if (!open) return null;
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-[#0f172a] border border-white/10 rounded-2xl p-6 max-w-sm w-full shadow-2xl">
+    <div className="fixed inset-0 bg-gray-900/40 dark:bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-white dark:bg-[#0f172a] border border-gray-200 dark:border-white/10 rounded-2xl p-6 max-w-sm w-full shadow-2xl">
         <div className="flex items-center gap-3 mb-3">
           <AlertTriangle className="w-6 h-6 text-warning-amber shrink-0" />
-          <h3 className="text-lg font-semibold text-white">{title}</h3>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{title}</h3>
         </div>
-        <p className="text-cool-slate text-sm mb-6">{message}</p>
+        <p className="text-gray-500 dark:text-cool-slate text-sm mb-6">{message}</p>
         <div className="flex gap-3 justify-end">
-          <button onClick={onCancel} className="px-4 py-2 text-sm rounded-lg bg-white/5 hover:bg-white/10 text-white transition-colors">Cancel</button>
-          <button onClick={onConfirm} className="px-4 py-2 text-sm rounded-lg bg-red-500 hover:bg-red-600 text-white transition-colors font-medium">Confirm</button>
+          <button onClick={onCancel} className="px-4 py-2 text-sm rounded-lg bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 text-gray-900 dark:text-white transition-colors">Cancel</button>
+          <button onClick={onConfirm} className="px-4 py-2 text-sm rounded-lg bg-red-500 hover:bg-red-600 text-gray-900 dark:text-white transition-colors font-medium">Confirm</button>
         </div>
       </div>
     </div>
@@ -75,7 +75,7 @@ const SeverityBadge = ({ severity }: { severity: string }) => {
 
 // ── Skeleton ──────────────────────────────────────────
 const Skeleton = ({ className }: { className?: string }) => (
-  <div className={`animate-pulse bg-white/5 rounded-lg ${className}`} />
+  <div className={`animate-pulse bg-gray-100 dark:bg-white/5 rounded-lg ${className}`} />
 );
 
 const TABS = [
@@ -366,16 +366,16 @@ const AdminDashboard: React.FC = () => {
 
   const sortHeader = (key: string) => (
     <button onClick={() => setUserSort(s => ({ key, dir: s.key === key && s.dir === 'asc' ? 'desc' : 'asc' }))}
-      className="flex items-center gap-1 hover:text-white transition-colors">
+      className="flex items-center gap-1 hover:text-gray-900 dark:text-white transition-colors">
       {key.replace('_', ' ')} <ArrowUpDown className="w-3 h-3" />
     </button>
   );
 
   const Pagination = ({ page, pages, onPage }: any) => pages <= 1 ? null : (
-    <div className="flex items-center gap-2 justify-end p-4 border-t border-white/5">
-      <button onClick={() => onPage(page - 1)} disabled={page === 1} className="p-1.5 rounded hover:bg-white/10 disabled:opacity-30 transition-colors"><ChevronLeft className="w-4 h-4" /></button>
-      <span className="text-cool-slate text-sm">Page {page} of {pages}</span>
-      <button onClick={() => onPage(page + 1)} disabled={page === pages} className="p-1.5 rounded hover:bg-white/10 disabled:opacity-30 transition-colors"><ChevronRight className="w-4 h-4" /></button>
+    <div className="flex items-center gap-2 justify-end p-4 border-t border-gray-100 dark:border-white/5">
+      <button onClick={() => onPage(page - 1)} disabled={page === 1} className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-white/10 disabled:opacity-30 transition-colors"><ChevronLeft className="w-4 h-4" /></button>
+      <span className="text-gray-500 dark:text-cool-slate text-sm">Page {page} of {pages}</span>
+      <button onClick={() => onPage(page + 1)} disabled={page === pages} className="p-1.5 rounded hover:bg-gray-200 dark:hover:bg-white/10 disabled:opacity-30 transition-colors"><ChevronRight className="w-4 h-4" /></button>
     </div>
   );
 
@@ -384,14 +384,15 @@ const AdminDashboard: React.FC = () => {
     return (
       <div className={`mt-3 text-xs font-medium flex items-center gap-1 ${trend.is_positive ? 'text-healthy-emerald' : 'text-red-400'}`}>
         {trend.direction === 'up' ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
-        {trend.value} <span className="text-cool-slate ml-1 font-normal opacity-70">vs last week</span>
+        {trend.value} <span className="text-gray-500 dark:text-cool-slate ml-1 font-normal opacity-70">vs last week</span>
       </div>
     );
   };
 
   // ── Render ──────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-[#020b08] pt-28 pb-24 px-4 md:px-10 text-white">
+    <div className={theme}>
+      <div className="min-h-screen bg-gray-50 dark:bg-[#020b08] pt-28 pb-24 px-4 md:px-10 text-gray-900 dark:text-white">
       <ToastContainer toasts={toasts} remove={id => setToasts(t => t.filter(x => x.id !== id))} />
       <ConfirmDialog open={!!confirm} {...confirm} onCancel={() => setConfirm(null)} />
 
@@ -404,30 +405,30 @@ const AdminDashboard: React.FC = () => {
                 <Shield className="w-5 h-5 text-farm-accent" />
                 <span className="text-xs font-bold tracking-[0.2em] text-farm-accent uppercase">Admin Control Center</span>
               </div>
-              <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-black/40 border border-white/5 text-xs text-cool-slate">
+              <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-white dark:bg-black/40 border border-gray-100 dark:border-white/5 text-xs text-gray-500 dark:text-cool-slate">
                 <div className="w-2 h-2 rounded-full bg-healthy-emerald animate-pulse" />
                 <span>LIVE</span>
-                <span className="opacity-50 ml-1 border-l border-white/20 pl-2">Updated {lastRefreshed}s ago</span>
+                <span className="opacity-50 ml-1 border-l border-gray-300 dark:border-white/20 pl-2">Updated {lastRefreshed}s ago</span>
               </div>
             </div>
-            <h1 className="text-3xl font-light tracking-tight text-white">FarmShield AI</h1>
+            <h1 className="text-3xl font-light tracking-tight text-gray-900 dark:text-white">FarmShield AI</h1>
           </div>
           <div className="flex items-center gap-3 print:hidden">
-            <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} className="p-2.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 transition-colors">
+            <button onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} className="p-2.5 rounded-lg bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 border border-gray-200 dark:border-white/10 transition-colors">
               {theme === 'dark' ? <Sun className="w-4 h-4 text-yellow-400" /> : <Moon className="w-4 h-4 text-blue-400" />}
             </button>
             <button onClick={async () => { setLoading(true); if (activeTab === 'overview' || activeTab === 'analytics') await fetchStats(); if (activeTab === 'users') await fetchUsers(); if (activeTab === 'detections') await fetchDetections(); if (activeTab === 'logs') await fetchLogs(); setLoading(false); setLastRefreshed(0); toast('Data refreshed'); }}
-              className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-sm transition-colors">
+              className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 border border-gray-200 dark:border-white/10 rounded-lg text-sm transition-colors">
               <RefreshCw className="w-4 h-4" /> Refresh
             </button>
           </div>
         </div>
 
         {/* Tab Bar */}
-        <div className="flex gap-1 bg-white/[0.03] border border-white/10 p-1 rounded-xl mb-8 overflow-x-auto">
+        <div className="flex gap-1 bg-white shadow-sm dark:bg-white/[0.03] dark:shadow-none border border-gray-200 dark:border-white/10 p-1 rounded-xl mb-8 overflow-x-auto">
           {TABS.map(({ id, label, icon: Icon }) => (
             <button key={id} onClick={() => setActiveTab(id)}
-              className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg whitespace-nowrap transition-all ${activeTab === id ? 'bg-farm-accent text-black shadow-lg' : 'text-cool-slate hover:text-white hover:bg-white/5'
+              className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-lg whitespace-nowrap transition-all ${activeTab === id ? 'bg-farm-accent text-black shadow-lg' : 'text-gray-500 dark:text-cool-slate hover:text-gray-900 dark:text-white hover:bg-gray-100 dark:bg-white/5'
                 }`}>
               <Icon className="w-4 h-4" /> {label}
             </button>
@@ -448,74 +449,74 @@ const AdminDashboard: React.FC = () => {
             {activeTab === 'overview' && stats && (
               <div className="space-y-6">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="bg-white/[0.03] border border-white/10 p-5 rounded-xl group hover:border-farm-accent/30 transition-all">
+                  <div className="bg-white shadow-sm dark:bg-white/[0.03] dark:shadow-none border border-gray-200 dark:border-white/10 p-5 rounded-xl group hover:border-farm-accent/30 transition-all">
                     <div className="flex justify-between items-start mb-3">
                       <Users className="w-7 h-7 text-farm-accent" />
                     </div>
                     <div className="text-2xl font-bold">{stats.stats.total_users}</div>
-                    <div className="text-cool-slate text-xs">Total Farmers</div>
+                    <div className="text-gray-500 dark:text-cool-slate text-xs">Total Farmers</div>
                     <Trend trend={stats.trends?.total_users} />
                   </div>
-                  <div className="bg-white/[0.03] border border-white/10 p-5 rounded-xl hover:border-blue-400/30 transition-all">
+                  <div className="bg-white shadow-sm dark:bg-white/[0.03] dark:shadow-none border border-gray-200 dark:border-white/10 p-5 rounded-xl hover:border-blue-400/30 transition-all">
                     <div className="flex justify-between items-start mb-3">
                       <Activity className="w-7 h-7 text-blue-400" />
                     </div>
                     <div className="text-2xl font-bold">{stats.stats.total_detections}</div>
-                    <div className="text-cool-slate text-xs">Total Detections</div>
+                    <div className="text-gray-500 dark:text-cool-slate text-xs">Total Detections</div>
                     <Trend trend={stats.trends?.total_detections} />
                   </div>
-                  <div className="bg-white/[0.03] border border-white/10 p-5 rounded-xl hover:border-healthy-emerald/30 transition-all">
+                  <div className="bg-white shadow-sm dark:bg-white/[0.03] dark:shadow-none border border-gray-200 dark:border-white/10 p-5 rounded-xl hover:border-healthy-emerald/30 transition-all">
                     <div className="flex justify-between items-start mb-3">
                       <Cpu className="w-7 h-7 text-healthy-emerald" />
                     </div>
                     <div className="text-2xl font-bold">{stats.stats.model_health}</div>
-                    <div className="text-cool-slate text-xs">AI Model Health</div>
+                    <div className="text-gray-500 dark:text-cool-slate text-xs">AI Model Health</div>
                     <Trend trend={stats.trends?.model_health} />
                   </div>
-                  <div className="bg-white/[0.03] border border-white/10 p-5 rounded-xl hover:border-yellow-400/30 transition-all">
+                  <div className="bg-white shadow-sm dark:bg-white/[0.03] dark:shadow-none border border-gray-200 dark:border-white/10 p-5 rounded-xl hover:border-yellow-400/30 transition-all">
                     <div className="flex justify-between items-start mb-3">
                       <ShieldAlert className="w-7 h-7 text-yellow-400" />
                     </div>
                     <div className="text-2xl font-bold">{stats.stats.active_users}</div>
-                    <div className="text-cool-slate text-xs">Active Sessions</div>
+                    <div className="text-gray-500 dark:text-cool-slate text-xs">Active Sessions</div>
                     <Trend trend={stats.trends?.active_users} />
                   </div>
-                  <div className="bg-white/[0.03] border border-white/10 p-5 rounded-xl hover:border-orange-400/30 transition-all">
+                  <div className="bg-white shadow-sm dark:bg-white/[0.03] dark:shadow-none border border-gray-200 dark:border-white/10 p-5 rounded-xl hover:border-orange-400/30 transition-all">
                     <div className="flex justify-between items-start mb-3">
                       <Calendar className="w-7 h-7 text-orange-400" />
                     </div>
                     <div className="text-2xl font-bold">{stats.stats.today_detections}</div>
-                    <div className="text-cool-slate text-xs">Detections Today</div>
+                    <div className="text-gray-500 dark:text-cool-slate text-xs">Detections Today</div>
                     <Trend trend={stats.trends?.today_detections} />
                   </div>
-                  <div className="bg-white/[0.03] border border-white/10 p-5 rounded-xl hover:border-purple-400/30 transition-all">
+                  <div className="bg-white shadow-sm dark:bg-white/[0.03] dark:shadow-none border border-gray-200 dark:border-white/10 p-5 rounded-xl hover:border-purple-400/30 transition-all">
                     <div className="flex justify-between items-start mb-3">
                       <Leaf className="w-7 h-7 text-purple-400" />
                     </div>
                     <div className="text-sm font-semibold truncate" title={stats.stats.top_disease_week}>{stats.stats.top_disease_week?.replace(/___/g, ' ')?.replace(/_/g, ' ') || 'N/A'}</div>
-                    <div className="text-cool-slate text-xs">Top Disease (Week)</div>
+                    <div className="text-gray-500 dark:text-cool-slate text-xs">Top Disease (Week)</div>
                     <Trend trend={stats.trends?.top_disease_week} />
                   </div>
-                  <div className="bg-white/[0.03] border border-white/10 p-5 rounded-xl hover:border-pink-400/30 transition-all">
+                  <div className="bg-white shadow-sm dark:bg-white/[0.03] dark:shadow-none border border-gray-200 dark:border-white/10 p-5 rounded-xl hover:border-pink-400/30 transition-all">
                     <div className="flex justify-between items-start mb-3">
                       <UserPlus className="w-7 h-7 text-pink-400" />
                     </div>
                     <div className="text-2xl font-bold">{stats.stats.new_users_week}</div>
-                    <div className="text-cool-slate text-xs">New Users (Week)</div>
+                    <div className="text-gray-500 dark:text-cool-slate text-xs">New Users (Week)</div>
                     <Trend trend={stats.trends?.new_users_week} />
                   </div>
-                  <div className="bg-white/[0.03] border border-white/10 p-5 rounded-xl hover:border-cyan-400/30 transition-all">
+                  <div className="bg-white shadow-sm dark:bg-white/[0.03] dark:shadow-none border border-gray-200 dark:border-white/10 p-5 rounded-xl hover:border-cyan-400/30 transition-all">
                     <div className="flex justify-between items-start mb-3">
                       <Clock className="w-7 h-7 text-cyan-400" />
                     </div>
                     <div className="text-2xl font-bold">{stats.stats.system_uptime}</div>
-                    <div className="text-cool-slate text-xs">System Uptime</div>
+                    <div className="text-gray-500 dark:text-cool-slate text-xs">System Uptime</div>
                     <Trend trend={stats.trends?.system_uptime} />
                   </div>
                 </div>
 
                 {/* 7-day trend chart */}
-                <div className="bg-white/[0.03] border border-white/10 rounded-xl p-6">
+                <div className="bg-white shadow-sm dark:bg-white/[0.03] dark:shadow-none border border-gray-200 dark:border-white/10 rounded-xl p-6">
                   <h3 className="text-base font-medium mb-6">Detection Activity — Last 7 Days</h3>
                   <div className="h-64">
                     <ResponsiveContainer width="100%" height="100%">
@@ -540,17 +541,17 @@ const AdminDashboard: React.FC = () => {
 
             {/* ── USERS TAB ─────────────────────────────────── */}
             {activeTab === 'users' && (
-              <div className="bg-white/[0.03] border border-white/10 rounded-xl overflow-hidden">
-                <div className="p-4 border-b border-white/10 flex flex-wrap gap-3 items-center justify-between">
-                  <h3 className="font-medium">Registered Users <span className="text-cool-slate text-sm ml-1">({filteredUsers.length})</span></h3>
+              <div className="bg-white shadow-sm dark:bg-white/[0.03] dark:shadow-none border border-gray-200 dark:border-white/10 rounded-xl overflow-hidden">
+                <div className="p-4 border-b border-gray-200 dark:border-white/10 flex flex-wrap gap-3 items-center justify-between">
+                  <h3 className="font-medium">Registered Users <span className="text-gray-500 dark:text-cool-slate text-sm ml-1">({filteredUsers.length})</span></h3>
                   <div className="flex flex-wrap gap-2">
                     <div className="relative">
-                      <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-cool-slate" />
+                      <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-cool-slate" />
                       <input value={userSearch} onChange={e => { setUserSearch(e.target.value); setUserPage(1); }}
-                        placeholder="Search name or email..." className="bg-black/40 border border-white/10 rounded-lg pl-9 pr-3 py-2 text-sm focus:border-farm-accent outline-none w-52" />
+                        placeholder="Search name or email..." className="bg-white dark:bg-black/40 border border-gray-200 dark:border-white/10 rounded-lg pl-9 pr-3 py-2 text-sm focus:border-farm-accent outline-none w-52" />
                     </div>
                     <select value={userRoleFilter} onChange={e => { setUserRoleFilter(e.target.value); setUserPage(1); }}
-                      className="bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm focus:border-farm-accent outline-none text-white">
+                      className="bg-white dark:bg-black/40 border border-gray-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm focus:border-farm-accent outline-none text-gray-900 dark:text-white">
                       <option value="all">All Roles</option>
                       <option value="admin">Admin</option>
                       <option value="user">User</option>
@@ -559,7 +560,7 @@ const AdminDashboard: React.FC = () => {
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-sm">
-                    <thead className="bg-white/[0.03] text-cool-slate text-xs uppercase">
+                    <thead className="bg-white shadow-sm dark:bg-white/[0.03] dark:shadow-none text-gray-500 dark:text-cool-slate text-xs uppercase">
                       <tr>
                         <th className="px-5 py-3.5">#</th>
                         <th className="px-5 py-3.5">{sortHeader('name')}</th>
@@ -570,10 +571,10 @@ const AdminDashboard: React.FC = () => {
                         <th className="px-5 py-3.5 text-right">Actions</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-white/[0.04]">
+                    <tbody className="divide-y divide-gray-200 dark:divide-white/[0.04]">
                       {pagedUsers.map((u, i) => (
-                        <tr key={u.id} className="hover:bg-white/[0.02] transition-colors group">
-                          <td className="px-5 py-3.5 text-cool-slate">{(userPage - 1) * USERS_PER_PAGE + i + 1}</td>
+                        <tr key={u.id} className="hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors group">
+                          <td className="px-5 py-3.5 text-gray-500 dark:text-cool-slate">{(userPage - 1) * USERS_PER_PAGE + i + 1}</td>
                           <td className="px-5 py-3.5">
                             <div className="flex items-center gap-2.5">
                               <div className="w-8 h-8 rounded-full bg-gradient-to-br from-farm-accent/40 to-blue-500/40 flex items-center justify-center text-xs font-bold shrink-0">
@@ -582,10 +583,10 @@ const AdminDashboard: React.FC = () => {
                               <span className="font-medium">{u.name || 'Anonymous'}</span>
                             </div>
                           </td>
-                          <td className="px-5 py-3.5 text-cool-slate">{u.email}</td>
+                          <td className="px-5 py-3.5 text-gray-500 dark:text-cool-slate">{u.email}</td>
                           <td className="px-5 py-3.5">
                             <div className="flex flex-col gap-1.5 items-start">
-                              <span className={`px-2.5 py-1 rounded-full text-[10px] uppercase tracking-wider font-medium border ${u.role === 'admin' ? 'bg-farm-accent/15 text-farm-accent border-farm-accent/30' : 'bg-white/5 text-white/60 border-white/10'}`}>
+                              <span className={`px-2.5 py-1 rounded-full text-[10px] uppercase tracking-wider font-medium border ${u.role === 'admin' ? 'bg-farm-accent/15 text-farm-accent border-farm-accent/30' : 'bg-gray-100 dark:bg-white/5 text-gray-900 dark:text-gray-400 dark:text-white/60 border-gray-200 dark:border-white/10'}`}>
                                 {u.role}
                               </span>
                               {u.is_suspended && (
@@ -596,7 +597,7 @@ const AdminDashboard: React.FC = () => {
                             </div>
                           </td>
                           <td className="px-5 py-3.5 font-medium">{u.total_detections}</td>
-                          <td className="px-5 py-3.5 text-cool-slate">{u.created_at}</td>
+                          <td className="px-5 py-3.5 text-gray-500 dark:text-cool-slate">{u.created_at}</td>
                           <td className="px-5 py-3.5">
                             <div className="flex items-center gap-2 justify-end opacity-70 group-hover:opacity-100 transition-opacity">
                               <button onClick={() => setSelectedUser(u)}
@@ -623,7 +624,7 @@ const AdminDashboard: React.FC = () => {
                         </tr>
                       ))}
                       {pagedUsers.length === 0 && (
-                        <tr><td colSpan={7} className="px-5 py-12 text-center text-cool-slate">No users found.</td></tr>
+                        <tr><td colSpan={7} className="px-5 py-12 text-center text-gray-500 dark:text-cool-slate">No users found.</td></tr>
                       )}
                     </tbody>
                   </table>
@@ -634,20 +635,20 @@ const AdminDashboard: React.FC = () => {
 
             {/* ── DETECTIONS TAB ────────────────────────────── */}
             {activeTab === 'detections' && (
-              <div className="bg-white/[0.03] border border-white/10 rounded-xl overflow-hidden">
-                <div className="p-4 border-b border-white/10 flex flex-wrap gap-3 items-center justify-between">
-                  <h3 className="font-medium">Disease Detections <span className="text-cool-slate text-sm ml-1">({filteredDets.length})</span></h3>
+              <div className="bg-white shadow-sm dark:bg-white/[0.03] dark:shadow-none border border-gray-200 dark:border-white/10 rounded-xl overflow-hidden">
+                <div className="p-4 border-b border-gray-200 dark:border-white/10 flex flex-wrap gap-3 items-center justify-between">
+                  <h3 className="font-medium">Disease Detections <span className="text-gray-500 dark:text-cool-slate text-sm ml-1">({filteredDets.length})</span></h3>
                   <div className="flex flex-wrap gap-2">
                     <div className="relative">
-                      <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-cool-slate" />
+                      <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-cool-slate" />
                       <input value={detSearch} onChange={e => { setDetSearch(e.target.value); setDetPage(1); }}
-                        placeholder="Search user, crop, disease..." className="bg-black/40 border border-white/10 rounded-lg pl-9 pr-3 py-2 text-sm focus:border-farm-accent outline-none w-52" />
+                        placeholder="Search user, crop, disease..." className="bg-white dark:bg-black/40 border border-gray-200 dark:border-white/10 rounded-lg pl-9 pr-3 py-2 text-sm focus:border-farm-accent outline-none w-52" />
                     </div>
 
-                    <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm focus:border-farm-accent outline-none text-cool-slate w-[130px]" />
-                    <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm focus:border-farm-accent outline-none text-cool-slate w-[130px]" />
+                    <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="bg-white dark:bg-black/40 border border-gray-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm focus:border-farm-accent outline-none text-gray-500 dark:text-cool-slate w-[130px]" />
+                    <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="bg-white dark:bg-black/40 border border-gray-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm focus:border-farm-accent outline-none text-gray-500 dark:text-cool-slate w-[130px]" />
 
-                    <select value={detDisease} onChange={e => setDetDisease(e.target.value)} className="bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm focus:border-farm-accent outline-none text-white w-32 truncate">
+                    <select value={detDisease} onChange={e => setDetDisease(e.target.value)} className="bg-white dark:bg-black/40 border border-gray-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm focus:border-farm-accent outline-none text-gray-900 dark:text-white w-32 truncate">
                       <option value="">All Diseases</option>
                       <option value="healthy">Healthy</option>
                       <option value="blight">Blight</option>
@@ -656,9 +657,9 @@ const AdminDashboard: React.FC = () => {
                     </select>
 
                     <input value={detCrop} onChange={e => setDetCrop(e.target.value)} placeholder="Filter crop..."
-                      className="bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm focus:border-farm-accent outline-none w-32" />
+                      className="bg-white dark:bg-black/40 border border-gray-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm focus:border-farm-accent outline-none w-32" />
                     <select value={detSeverity} onChange={e => setDetSeverity(e.target.value)}
-                      className="bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm focus:border-farm-accent outline-none text-white">
+                      className="bg-white dark:bg-black/40 border border-gray-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm focus:border-farm-accent outline-none text-gray-900 dark:text-white">
                       <option value="">All Severity</option>
                       <option value="low">🟢 Low</option>
                       <option value="medium">🟡 Medium</option>
@@ -675,7 +676,7 @@ const AdminDashboard: React.FC = () => {
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-sm">
-                    <thead className="bg-white/[0.03] text-cool-slate text-xs uppercase">
+                    <thead className="bg-white shadow-sm dark:bg-white/[0.03] dark:shadow-none text-gray-500 dark:text-cool-slate text-xs uppercase">
                       <tr>
                         <th className="px-5 py-3.5">Image</th>
                         <th className="px-5 py-3.5">Date & Time</th>
@@ -688,21 +689,21 @@ const AdminDashboard: React.FC = () => {
                         <th className="px-5 py-3.5 text-right print:hidden">Actions</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-white/[0.04]">
+                    <tbody className="divide-y divide-gray-200 dark:divide-white/[0.04]">
                       {pagedDets.map(d => (
-                        <tr key={d.id} className="hover:bg-white/[0.02] transition-colors">
+                        <tr key={d.id} className="hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
                           <td className="px-5 py-3.5">
                             {d.image_path ? (
                               <a href={`${API}${d.image_path}`} target="_blank" rel="noreferrer" title="Click to view full image">
-                                <img src={`${API}${d.image_path}`} alt="Crop Thumbnail" className="w-10 h-10 object-cover rounded shadow-md border border-white/10 hover:border-farm-accent transition-colors" />
+                                <img src={`${API}${d.image_path}`} alt="Crop Thumbnail" className="w-10 h-10 object-cover rounded shadow-md border border-gray-200 dark:border-white/10 hover:border-farm-accent transition-colors" />
                               </a>
                             ) : (
-                              <div className="w-10 h-10 bg-white/5 rounded flex items-center justify-center text-xs text-cool-slate border border-white/10" title="No Image Uploaded">
+                              <div className="w-10 h-10 bg-gray-100 dark:bg-white/5 rounded flex items-center justify-center text-xs text-gray-500 dark:text-cool-slate border border-gray-200 dark:border-white/10" title="No Image Uploaded">
                                 <Leaf className="w-4 h-4 opacity-50" />
                               </div>
                             )}
                           </td>
-                          <td className="px-5 py-3.5 text-cool-slate text-xs">{d.date}</td>
+                          <td className="px-5 py-3.5 text-gray-500 dark:text-cool-slate text-xs">{d.date}</td>
                           <td className="px-5 py-3.5 text-sm">{d.user_email}</td>
                           <td className="px-5 py-3.5 font-medium text-farm-accent">{d.crop}</td>
                           <td className="px-5 py-3.5 max-w-[200px] truncate" title={d.disease}>{d.disease}</td>
@@ -719,7 +720,7 @@ const AdminDashboard: React.FC = () => {
                         </tr>
                       ))}
                       {pagedDets.length === 0 && (
-                        <tr><td colSpan={7} className="px-5 py-12 text-center text-cool-slate">No detections found.</td></tr>
+                        <tr><td colSpan={7} className="px-5 py-12 text-center text-gray-500 dark:text-cool-slate">No detections found.</td></tr>
                       )}
                     </tbody>
                   </table>
@@ -733,7 +734,7 @@ const AdminDashboard: React.FC = () => {
               <div className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Disease Distribution Pie */}
-                  <div className="bg-white/[0.03] border border-white/10 rounded-xl p-6">
+                  <div className="bg-white shadow-sm dark:bg-white/[0.03] dark:shadow-none border border-gray-200 dark:border-white/10 rounded-xl p-6">
                     <h3 className="text-base font-medium mb-4">Disease Distribution</h3>
                     {stats.disease_chart?.length > 0 ? (
                       <div className="h-64">
@@ -749,11 +750,11 @@ const AdminDashboard: React.FC = () => {
                           </PieChart>
                         </ResponsiveContainer>
                       </div>
-                    ) : <div className="h-64 flex items-center justify-center text-cool-slate">No detection data yet.</div>}
+                    ) : <div className="h-64 flex items-center justify-center text-gray-500 dark:text-cool-slate">No detection data yet.</div>}
                   </div>
 
                   {/* Top Crops Bar */}
-                  <div className="bg-white/[0.03] border border-white/10 rounded-xl p-6">
+                  <div className="bg-white shadow-sm dark:bg-white/[0.03] dark:shadow-none border border-gray-200 dark:border-white/10 rounded-xl p-6">
                     <h3 className="text-base font-medium mb-4">Top 5 Scanned Crops</h3>
                     {stats.crop_chart?.length > 0 ? (
                       <div className="h-64">
@@ -767,12 +768,12 @@ const AdminDashboard: React.FC = () => {
                           </BarChart>
                         </ResponsiveContainer>
                       </div>
-                    ) : <div className="h-64 flex items-center justify-center text-cool-slate">No crop data yet.</div>}
+                    ) : <div className="h-64 flex items-center justify-center text-gray-500 dark:text-cool-slate">No crop data yet.</div>}
                   </div>
                 </div>
 
                 {/* Detection trend Line */}
-                <div className="bg-white/[0.03] border border-white/10 rounded-xl p-6">
+                <div className="bg-white shadow-sm dark:bg-white/[0.03] dark:shadow-none border border-gray-200 dark:border-white/10 rounded-xl p-6">
                   <h3 className="text-base font-medium mb-4">7-Day Detection Trend</h3>
                   <div className="h-56">
                     <ResponsiveContainer width="100%" height="100%">
@@ -790,7 +791,7 @@ const AdminDashboard: React.FC = () => {
                 {/* ── NEW ANALYTICS CHARTS ── */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* User Growth Line Chart */}
-                  <div className="bg-white/[0.03] border border-white/10 rounded-xl p-6">
+                  <div className="bg-white shadow-sm dark:bg-white/[0.03] dark:shadow-none border border-gray-200 dark:border-white/10 rounded-xl p-6">
                     <h3 className="text-base font-medium mb-4">User Growth (Last 30 Days)</h3>
                     <div className="h-56">
                       <ResponsiveContainer width="100%" height="100%">
@@ -806,7 +807,7 @@ const AdminDashboard: React.FC = () => {
                   </div>
 
                   {/* Peak Usage Hours Bar Chart */}
-                  <div className="bg-white/[0.03] border border-white/10 rounded-xl p-6">
+                  <div className="bg-white shadow-sm dark:bg-white/[0.03] dark:shadow-none border border-gray-200 dark:border-white/10 rounded-xl p-6">
                     <h3 className="text-base font-medium mb-4">Peak Usage Hours</h3>
                     <div className="h-56">
                       <ResponsiveContainer width="100%" height="100%">
@@ -824,7 +825,7 @@ const AdminDashboard: React.FC = () => {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Region-wise Heatmap (Mocked as Bar Chart) */}
-                  <div className="bg-white/[0.03] border border-white/10 rounded-xl p-6">
+                  <div className="bg-white shadow-sm dark:bg-white/[0.03] dark:shadow-none border border-gray-200 dark:border-white/10 rounded-xl p-6">
                     <h3 className="text-base font-medium mb-4 flex items-center gap-2"><Map className="w-4 h-4 text-farm-accent" /> Region-wise Detections</h3>
                     <div className="h-56">
                       <ResponsiveContainer width="100%" height="100%">
@@ -840,23 +841,23 @@ const AdminDashboard: React.FC = () => {
                   </div>
 
                   {/* Most Active Users */}
-                  <div className="bg-white/[0.03] border border-white/10 rounded-xl p-6">
+                  <div className="bg-white shadow-sm dark:bg-white/[0.03] dark:shadow-none border border-gray-200 dark:border-white/10 rounded-xl p-6">
                     <h3 className="text-base font-medium mb-4 flex items-center gap-2"><Users className="w-4 h-4 text-pink-400" /> Most Active Users</h3>
                     <div className="space-y-4">
                       {users.slice(0, 4).map((u, i) => (
-                        <div key={u.id || i} className="flex items-center justify-between pb-3 border-b border-white/5 last:border-0 last:pb-0">
+                        <div key={u.id || i} className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-white/5 last:border-0 last:pb-0">
                           <div className="flex items-center gap-3">
                             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-farm-accent/40 to-blue-500/40 flex items-center justify-center text-xs font-bold shrink-0">
                               {(u.name || u.email || '?').charAt(0).toUpperCase()}
                             </div>
                             <div>
                               <div className="text-sm font-medium">{u.name || 'Anonymous'}</div>
-                              <div className="text-cool-slate text-xs">{u.email}</div>
+                              <div className="text-gray-500 dark:text-cool-slate text-xs">{u.email}</div>
                             </div>
                           </div>
                           <div className="text-right">
                             <div className="text-sm font-bold text-farm-accent">{u.total_detections}</div>
-                            <div className="text-cool-slate text-xs">scans</div>
+                            <div className="text-gray-500 dark:text-cool-slate text-xs">scans</div>
                           </div>
                         </div>
                       ))}
@@ -870,15 +871,15 @@ const AdminDashboard: React.FC = () => {
             {activeTab === 'notifications' && (
               <div className="space-y-6">
                 {/* Broadcast Panel */}
-                <div className="bg-white/[0.03] border border-white/10 rounded-xl p-6">
+                <div className="bg-white shadow-sm dark:bg-white/[0.03] dark:shadow-none border border-gray-200 dark:border-white/10 rounded-xl p-6">
                   <div className="flex items-center gap-2 mb-4">
                     <Send className="w-5 h-5 text-farm-accent" />
                     <h3 className="text-base font-medium">Broadcast Message</h3>
                   </div>
-                  <p className="text-cool-slate text-sm mb-4">Send a message or system announcement to all registered users.</p>
+                  <p className="text-gray-500 dark:text-cool-slate text-sm mb-4">Send a message or system announcement to all registered users.</p>
                   <textarea value={broadcastMsg} onChange={e => setBroadcastMsg(e.target.value)}
                     placeholder="Type your message here..."
-                    rows={4} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:border-farm-accent outline-none resize-none mb-3" />
+                    rows={4} className="w-full bg-white dark:bg-black/40 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white focus:border-farm-accent outline-none resize-none mb-3" />
                   <button onClick={handleSendBroadcast}
                     className="flex items-center gap-2 px-5 py-2.5 bg-farm-accent text-black font-semibold text-sm rounded-lg hover:bg-farm-accent/90 transition-colors">
                     <Send className="w-4 h-4" /> Send Broadcast
@@ -887,7 +888,7 @@ const AdminDashboard: React.FC = () => {
                 </div>
 
                 {/* Alert Types */}
-                <div className="bg-white/[0.03] border border-white/10 rounded-xl p-6">
+                <div className="bg-white shadow-sm dark:bg-white/[0.03] dark:shadow-none border border-gray-200 dark:border-white/10 rounded-xl p-6">
                   <div className="flex items-center gap-2 mb-4">
                     <Bell className="w-5 h-5 text-warning-amber" />
                     <h3 className="text-base font-medium">Create System Alert</h3>
@@ -899,9 +900,9 @@ const AdminDashboard: React.FC = () => {
                       { id: 'system', label: '⚙️ System Maintenance', desc: 'Notify users of upcoming maintenance or downtime.', color: 'border-blue-500/30 bg-blue-500/5' },
                     ].map(a => (
                       <button key={a.id} onClick={() => setAlertType(a.id)}
-                        className={`text-left p-4 rounded-xl border transition-all ${alertType === a.id ? a.color + ' ring-1 ring-farm-accent' : 'border-white/10 hover:border-white/20'}`}>
+                        className={`text-left p-4 rounded-xl border transition-all ${alertType === a.id ? a.color + ' ring-1 ring-farm-accent' : 'border-gray-200 dark:border-white/10 hover:border-gray-300 dark:border-white/20'}`}>
                         <div className="font-medium text-sm mb-1">{a.label}</div>
-                        <div className="text-cool-slate text-xs">{a.desc}</div>
+                        <div className="text-gray-500 dark:text-cool-slate text-xs">{a.desc}</div>
                       </button>
                     ))}
                   </div>
@@ -912,26 +913,26 @@ const AdminDashboard: React.FC = () => {
                 </div>
 
                 {/* Notification Log */}
-                <div className="bg-white/[0.03] border border-white/10 rounded-xl p-6">
+                <div className="bg-white shadow-sm dark:bg-white/[0.03] dark:shadow-none border border-gray-200 dark:border-white/10 rounded-xl p-6">
                   <h3 className="text-base font-medium mb-4">Recent System Alerts</h3>
                   <div className="space-y-3">
                     {alerts.length > 0 ? alerts.map((n, i) => (
-                      <div key={i} className="flex items-center justify-between py-3 border-b border-white/5 last:border-0">
+                      <div key={i} className="flex items-center justify-between py-3 border-b border-gray-100 dark:border-white/5 last:border-0">
                         <div className="flex items-center gap-3">
                           <div className={`w-2 h-2 rounded-full ${n.type === 'weather' ? 'bg-yellow-400' : n.type === 'outbreak' ? 'bg-red-400' : n.type === 'broadcast' ? 'bg-healthy-emerald' : 'bg-blue-400'}`} />
                           <div>
                             <div className="text-sm font-medium">{n.title}</div>
-                            <div className="text-cool-slate text-xs">Sent to {n.target}</div>
+                            <div className="text-gray-500 dark:text-cool-slate text-xs">Sent to {n.target}</div>
                           </div>
                         </div>
-                        <span className="text-cool-slate text-xs">{n.created_at}</span>
+                        <span className="text-gray-500 dark:text-cool-slate text-xs">{n.created_at}</span>
                       </div>
-                    )) : <div className="text-cool-slate text-sm">No recent alerts.</div>}
+                    )) : <div className="text-gray-500 dark:text-cool-slate text-sm">No recent alerts.</div>}
                   </div>
                 </div>
 
                 {/* Push Notification Management */}
-                <div className="bg-white/[0.03] border border-white/10 rounded-xl p-6">
+                <div className="bg-white shadow-sm dark:bg-white/[0.03] dark:shadow-none border border-gray-200 dark:border-white/10 rounded-xl p-6">
                   <h3 className="text-base font-medium mb-4 flex items-center gap-2"><Smartphone className="w-4 h-4 text-blue-400" /> Push Notifications</h3>
                   <div className="space-y-4">
                     {[
@@ -941,7 +942,7 @@ const AdminDashboard: React.FC = () => {
                       <div key={key} className="flex items-center justify-between py-3 border-b border-white/[0.04] last:border-0">
                         <div>
                           <div className="text-sm font-medium">{label}</div>
-                          <div className="text-cool-slate text-xs">{desc}</div>
+                          <div className="text-gray-500 dark:text-cool-slate text-xs">{desc}</div>
                         </div>
                         <button onClick={() => toast(`${label} toggled!`)}
                           className={`w-11 h-6 rounded-full transition-colors bg-white/10 relative shrink-0`}>
@@ -953,7 +954,7 @@ const AdminDashboard: React.FC = () => {
                 </div>
 
                 {/* Email Notification Logs */}
-                <div className="bg-white/[0.03] border border-white/10 rounded-xl p-6">
+                <div className="bg-white shadow-sm dark:bg-white/[0.03] dark:shadow-none border border-gray-200 dark:border-white/10 rounded-xl p-6">
                   <h3 className="text-base font-medium mb-4 flex items-center gap-2"><Mail className="w-4 h-4 text-pink-400" /> Email Notification Logs</h3>
                   <div className="space-y-3">
                     {[
@@ -961,14 +962,14 @@ const AdminDashboard: React.FC = () => {
                       { email: 'sara@farm.com', subject: 'Weekly Analytics Report', status: 'Opened', time: '2 hours ago' },
                       { email: 'user2@demo.com', subject: 'Weather Warning: Heavy Rain', status: 'Failed', time: '5 hours ago' }
                     ].map((log, i) => (
-                      <div key={i} className="flex items-center justify-between py-3 border-b border-white/5 last:border-0">
+                      <div key={i} className="flex items-center justify-between py-3 border-b border-gray-100 dark:border-white/5 last:border-0">
                         <div>
                           <div className="text-sm font-medium">{log.subject}</div>
-                          <div className="text-cool-slate text-xs">{log.email}</div>
+                          <div className="text-gray-500 dark:text-cool-slate text-xs">{log.email}</div>
                         </div>
                         <div className="text-right">
                           <span className={`px-2 py-1 rounded text-[10px] uppercase font-bold tracking-wider ${log.status === 'Failed' ? 'bg-red-500/10 text-red-400' : 'bg-healthy-emerald/10 text-healthy-emerald'}`}>{log.status}</span>
-                          <div className="text-cool-slate text-xs mt-1">{log.time}</div>
+                          <div className="text-gray-500 dark:text-cool-slate text-xs mt-1">{log.time}</div>
                         </div>
                       </div>
                     ))}
@@ -979,16 +980,16 @@ const AdminDashboard: React.FC = () => {
 
             {/* ── ACTIVITY LOGS TAB ─────────────────────────── */}
             {activeTab === 'logs' && (
-              <div className="bg-white/[0.03] border border-white/10 rounded-xl overflow-hidden">
-                <div className="p-4 border-b border-white/10 flex items-center justify-between">
-                  <h3 className="font-medium">Activity Feed <span className="text-cool-slate text-sm ml-1">({logs.length})</span></h3>
-                  <button onClick={fetchLogs} className="flex items-center gap-1.5 text-xs text-cool-slate hover:text-white transition-colors">
+              <div className="bg-white shadow-sm dark:bg-white/[0.03] dark:shadow-none border border-gray-200 dark:border-white/10 rounded-xl overflow-hidden">
+                <div className="p-4 border-b border-gray-200 dark:border-white/10 flex items-center justify-between">
+                  <h3 className="font-medium">Activity Feed <span className="text-gray-500 dark:text-cool-slate text-sm ml-1">({logs.length})</span></h3>
+                  <button onClick={fetchLogs} className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-cool-slate hover:text-gray-900 dark:text-white transition-colors">
                     <RefreshCw className="w-3 h-3" /> Refresh
                   </button>
                 </div>
-                <div className="divide-y divide-white/[0.04]">
+                <div className="divide-y divide-gray-200 dark:divide-white/[0.04]">
                   {logs.slice(0, 30).map((log, i) => (
-                    <div key={i} className="flex items-start gap-4 px-5 py-3.5 hover:bg-white/[0.02] transition-colors">
+                    <div key={i} className="flex items-start gap-4 px-5 py-3.5 hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
                       <div className={`mt-0.5 w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${log.type === 'detection' ? 'bg-farm-accent/15 text-farm-accent' :
                           log.type === 'registration' ? 'bg-blue-500/15 text-blue-400' :
                             log.type === 'role_change' ? 'bg-purple-500/15 text-purple-400' :
@@ -1003,17 +1004,17 @@ const AdminDashboard: React.FC = () => {
                               <UserPlus className="w-3.5 h-3.5" />}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium text-white">{log.action}</div>
-                        <div className="text-cool-slate text-xs mt-0.5">{log.user}</div>
+                        <div className="text-sm font-medium text-gray-900 dark:text-white">{log.action}</div>
+                        <div className="text-gray-500 dark:text-cool-slate text-xs mt-0.5">{log.user}</div>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
                         {log.severity && log.type === 'detection' && <SeverityBadge severity={log.severity} />}
-                        <span className="text-cool-slate text-xs">{log.timestamp}</span>
+                        <span className="text-gray-500 dark:text-cool-slate text-xs">{log.timestamp}</span>
                       </div>
                     </div>
                   ))}
                   {logs.length === 0 && (
-                    <div className="py-16 text-center text-cool-slate">No activity logs yet.</div>
+                    <div className="py-16 text-center text-gray-500 dark:text-cool-slate">No activity logs yet.</div>
                   )}
                 </div>
               </div>
@@ -1023,20 +1024,20 @@ const AdminDashboard: React.FC = () => {
             {activeTab === 'settings' && (
               <div className="space-y-6">
                 {/* AI Settings */}
-                <div className="bg-white/[0.03] border border-white/10 rounded-xl p-6">
+                <div className="bg-white shadow-sm dark:bg-white/[0.03] dark:shadow-none border border-gray-200 dark:border-white/10 rounded-xl p-6">
                   <h3 className="text-base font-medium mb-4 flex items-center gap-2"><Cpu className="w-4 h-4 text-farm-accent" /> AI Model Configuration</h3>
                   <div className="space-y-4">
                     <div>
-                      <label className="text-sm text-cool-slate mb-1.5 block">Detection Confidence Threshold: <span className="text-white font-medium">{settings.aiThreshold}%</span></label>
+                      <label className="text-sm text-gray-500 dark:text-cool-slate mb-1.5 block">Detection Confidence Threshold: <span className="text-gray-900 dark:text-white font-medium">{settings.aiThreshold}%</span></label>
                       <input type="range" min="50" max="99" value={settings.aiThreshold}
                         onChange={e => setSettings(s => ({ ...s, aiThreshold: e.target.value }))}
                         className="w-full accent-farm-accent" />
-                      <div className="flex justify-between text-xs text-cool-slate mt-1"><span>50%</span><span>99%</span></div>
+                      <div className="flex justify-between text-xs text-gray-500 dark:text-cool-slate mt-1"><span>50%</span><span>99%</span></div>
                     </div>
-                    <div className="flex items-center justify-between py-3 border-t border-white/5">
+                    <div className="flex items-center justify-between py-3 border-t border-gray-100 dark:border-white/5">
                       <div>
                         <div className="text-sm font-medium">Active Model</div>
-                        <div className="text-cool-slate text-xs">PlantVillage CNN {settings.modelVersion}</div>
+                        <div className="text-gray-500 dark:text-cool-slate text-xs">PlantVillage CNN {settings.modelVersion}</div>
                       </div>
                       <span className="px-3 py-1 bg-healthy-emerald/15 text-healthy-emerald border border-healthy-emerald/30 rounded-full text-xs font-medium">Active</span>
                     </div>
@@ -1044,21 +1045,21 @@ const AdminDashboard: React.FC = () => {
                 </div>
 
                 {/* Security Settings */}
-                <div className="bg-white/[0.03] border border-white/10 rounded-xl p-6">
+                <div className="bg-white shadow-sm dark:bg-white/[0.03] dark:shadow-none border border-gray-200 dark:border-white/10 rounded-xl p-6">
                   <h3 className="text-base font-medium mb-4 flex items-center gap-2"><Key className="w-4 h-4 text-purple-400" /> Security & API</h3>
                   <div className="space-y-4">
                     <div className="flex items-center justify-between py-3 border-b border-white/[0.04]">
                       <div>
                         <div className="text-sm font-medium">Two-Factor Authentication (2FA)</div>
-                        <div className="text-cool-slate text-xs">Require 2FA for admin logins</div>
+                        <div className="text-gray-500 dark:text-cool-slate text-xs">Require 2FA for admin logins</div>
                       </div>
                       <button onClick={() => toast('2FA setting toggled')} className={`w-11 h-6 rounded-full transition-colors bg-white/10 relative shrink-0`}><span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform`} /></button>
                     </div>
                     <div className="py-3">
                       <div className="text-sm font-medium mb-2">API Keys</div>
                       <div className="flex gap-2">
-                        <input type="text" readOnly value="sk_live_XXXXXXXXXXXXXXXXXXXXXX" className="bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-cool-slate w-full font-mono" />
-                        <button onClick={() => toast('API Key Copied')} className="px-3 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-sm transition-colors whitespace-nowrap">Copy</button>
+                        <input type="text" readOnly value="sk_live_XXXXXXXXXXXXXXXXXXXXXX" className="bg-white dark:bg-black/40 border border-gray-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm text-gray-500 dark:text-cool-slate w-full font-mono" />
+                        <button onClick={() => toast('API Key Copied')} className="px-3 py-2 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 border border-gray-200 dark:border-white/10 rounded-lg text-sm transition-colors whitespace-nowrap">Copy</button>
                         <button onClick={() => toast('API Key Regenerated')} className="px-3 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg text-sm transition-colors whitespace-nowrap">Regenerate</button>
                       </div>
                     </div>
@@ -1066,7 +1067,7 @@ const AdminDashboard: React.FC = () => {
                 </div>
 
                 {/* System Settings */}
-                <div className="bg-white/[0.03] border border-white/10 rounded-xl p-6">
+                <div className="bg-white shadow-sm dark:bg-white/[0.03] dark:shadow-none border border-gray-200 dark:border-white/10 rounded-xl p-6">
                   <h3 className="text-base font-medium mb-4 flex items-center gap-2"><Settings className="w-4 h-4 text-blue-400" /> System Settings</h3>
                   <div className="space-y-4">
                     {[
@@ -1077,7 +1078,7 @@ const AdminDashboard: React.FC = () => {
                       <div key={key} className="flex items-center justify-between py-3 border-b border-white/[0.04] last:border-0">
                         <div>
                           <div className="text-sm font-medium">{label}</div>
-                          <div className="text-cool-slate text-xs">{desc}</div>
+                          <div className="text-gray-500 dark:text-cool-slate text-xs">{desc}</div>
                         </div>
                         <button onClick={() => setSettings(s => ({ ...s, [key]: !(s as any)[key] }))}
                           className={`w-11 h-6 rounded-full transition-colors ${(settings as any)[key] ? 'bg-farm-accent' : 'bg-white/10'} relative shrink-0`}>
@@ -1089,20 +1090,20 @@ const AdminDashboard: React.FC = () => {
                 </div>
 
                 {/* Announcement Banner */}
-                <div className="bg-white/[0.03] border border-white/10 rounded-xl p-6">
+                <div className="bg-white shadow-sm dark:bg-white/[0.03] dark:shadow-none border border-gray-200 dark:border-white/10 rounded-xl p-6">
                   <h3 className="text-base font-medium mb-4 flex items-center gap-2"><Bell className="w-4 h-4 text-warning-amber" /> System Announcement</h3>
                   <textarea value={settings.announcement} onChange={e => setSettings(s => ({ ...s, announcement: e.target.value }))}
                     placeholder="Enter announcement to display on the platform..."
-                    rows={3} className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:border-farm-accent outline-none resize-none mb-3" />
+                    rows={3} className="w-full bg-white dark:bg-black/40 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white focus:border-farm-accent outline-none resize-none mb-3" />
                   <button onClick={() => toast('Announcement published!')} className="px-5 py-2.5 bg-warning-amber text-black font-semibold text-sm rounded-lg hover:bg-warning-amber/90 transition-colors">
                     Publish Announcement
                   </button>
                 </div>
 
                 {/* Database Backup */}
-                <div className="bg-white/[0.03] border border-red-500/20 rounded-xl p-6">
+                <div className="bg-white shadow-sm dark:bg-white/[0.03] dark:shadow-none border border-red-500/20 rounded-xl p-6">
                   <h3 className="text-base font-medium mb-2 flex items-center gap-2 text-red-400"><AlertTriangle className="w-4 h-4" /> Danger Zone</h3>
-                  <p className="text-cool-slate text-sm mb-4">Irreversible actions — proceed with caution.</p>
+                  <p className="text-gray-500 dark:text-cool-slate text-sm mb-4">Irreversible actions — proceed with caution.</p>
                   <div className="flex flex-wrap gap-3">
                     <button onClick={() => toast('Database backup initiated!', 'info')} className="px-4 py-2 text-sm bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-400 rounded-lg transition-colors flex items-center gap-1.5">
                       <Download className="w-4 h-4" /> Download DB Backup
@@ -1121,24 +1122,24 @@ const AdminDashboard: React.FC = () => {
 
       {/* ── User Details Modal ── */}
       {selectedUser && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[#0f172a] border border-white/10 rounded-2xl p-6 max-w-md w-full shadow-2xl relative">
-            <button onClick={() => setSelectedUser(null)} className="absolute top-4 right-4 text-cool-slate hover:text-white"><X className="w-5 h-5" /></button>
+        <div className="fixed inset-0 bg-gray-900/40 dark:bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#0f172a] border border-gray-200 dark:border-white/10 rounded-2xl p-6 max-w-md w-full shadow-2xl relative">
+            <button onClick={() => setSelectedUser(null)} className="absolute top-4 right-4 text-gray-500 dark:text-cool-slate hover:text-gray-900 dark:text-white"><X className="w-5 h-5" /></button>
             <div className="flex items-center gap-4 mb-6">
               <div className="w-16 h-16 rounded-full bg-gradient-to-br from-farm-accent/40 to-blue-500/40 flex items-center justify-center text-2xl font-bold">
                 {(selectedUser.name || selectedUser.email || '?').charAt(0).toUpperCase()}
               </div>
               <div>
-                <h3 className="text-xl font-semibold text-white">{selectedUser.name || 'Anonymous'}</h3>
-                <div className="text-cool-slate text-sm">{selectedUser.email}</div>
-                <div className="text-xs mt-1 inline-block px-2 py-0.5 rounded-full bg-white/5 text-white/70 border border-white/10 uppercase tracking-wider">{selectedUser.role}</div>
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-white">{selectedUser.name || 'Anonymous'}</h3>
+                <div className="text-gray-500 dark:text-cool-slate text-sm">{selectedUser.email}</div>
+                <div className="text-xs mt-1 inline-block px-2 py-0.5 rounded-full bg-gray-100 dark:bg-white/5 text-gray-900 dark:text-white/70 border border-gray-200 dark:border-white/10 uppercase tracking-wider">{selectedUser.role}</div>
               </div>
             </div>
             <div className="space-y-3 text-sm">
-              <div className="flex justify-between py-2 border-b border-white/5"><span className="text-cool-slate">Joined Date</span><span>{selectedUser.created_at}</span></div>
-              <div className="flex justify-between py-2 border-b border-white/5"><span className="text-cool-slate">Last Active</span><span>2 mins ago</span></div>
-              <div className="flex justify-between py-2 border-b border-white/5"><span className="text-cool-slate">Location/Region</span><span>Maharashtra, India</span></div>
-              <div className="flex justify-between py-2 border-b border-white/5"><span className="text-cool-slate">Total Detections</span><span className="font-bold text-farm-accent">{selectedUser.total_detections}</span></div>
+              <div className="flex justify-between py-2 border-b border-gray-100 dark:border-white/5"><span className="text-gray-500 dark:text-cool-slate">Joined Date</span><span>{selectedUser.created_at}</span></div>
+              <div className="flex justify-between py-2 border-b border-gray-100 dark:border-white/5"><span className="text-gray-500 dark:text-cool-slate">Last Active</span><span>2 mins ago</span></div>
+              <div className="flex justify-between py-2 border-b border-gray-100 dark:border-white/5"><span className="text-gray-500 dark:text-cool-slate">Location/Region</span><span>Maharashtra, India</span></div>
+              <div className="flex justify-between py-2 border-b border-gray-100 dark:border-white/5"><span className="text-gray-500 dark:text-cool-slate">Total Detections</span><span className="font-bold text-farm-accent">{selectedUser.total_detections}</span></div>
             </div>
           </div>
         </div>
@@ -1146,21 +1147,21 @@ const AdminDashboard: React.FC = () => {
 
       {/* ── Detection Details Modal ── */}
       {selectedDetection && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[#0f172a] border border-white/10 rounded-2xl p-6 max-w-lg w-full shadow-2xl relative">
-            <button onClick={() => setSelectedDetection(null)} className="absolute top-4 right-4 text-cool-slate hover:text-white"><X className="w-5 h-5" /></button>
-            <h3 className="text-lg font-semibold text-white mb-4">Detection Details</h3>
+        <div className="fixed inset-0 bg-gray-900/40 dark:bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#0f172a] border border-gray-200 dark:border-white/10 rounded-2xl p-6 max-w-lg w-full shadow-2xl relative">
+            <button onClick={() => setSelectedDetection(null)} className="absolute top-4 right-4 text-gray-500 dark:text-cool-slate hover:text-gray-900 dark:text-white"><X className="w-5 h-5" /></button>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Detection Details</h3>
             <div className="flex gap-4">
-              <div className="w-32 h-32 bg-white/5 rounded-lg border border-white/10 flex items-center justify-center shrink-0 overflow-hidden">
+              <div className="w-32 h-32 bg-gray-100 dark:bg-white/5 rounded-lg border border-gray-200 dark:border-white/10 flex items-center justify-center shrink-0 overflow-hidden">
                 <Leaf className="w-10 h-10 text-farm-accent opacity-50" />
               </div>
               <div className="flex-1 space-y-2 text-sm">
-                <div className="flex justify-between"><span className="text-cool-slate">Date</span><span>{selectedDetection.date}</span></div>
-                <div className="flex justify-between"><span className="text-cool-slate">User</span><span>{selectedDetection.user_email}</span></div>
-                <div className="flex justify-between"><span className="text-cool-slate">Crop</span><span className="font-medium">{selectedDetection.crop}</span></div>
-                <div className="flex justify-between"><span className="text-cool-slate">Diagnosis</span><span className="font-medium text-farm-accent">{selectedDetection.disease}</span></div>
-                <div className="flex justify-between"><span className="text-cool-slate">Confidence</span><span className="text-healthy-emerald font-bold">{selectedDetection.confidence}</span></div>
-                <div className="flex justify-between"><span className="text-cool-slate">Severity</span><span><SeverityBadge severity={selectedDetection.severity} /></span></div>
+                <div className="flex justify-between"><span className="text-gray-500 dark:text-cool-slate">Date</span><span>{selectedDetection.date}</span></div>
+                <div className="flex justify-between"><span className="text-gray-500 dark:text-cool-slate">User</span><span>{selectedDetection.user_email}</span></div>
+                <div className="flex justify-between"><span className="text-gray-500 dark:text-cool-slate">Crop</span><span className="font-medium">{selectedDetection.crop}</span></div>
+                <div className="flex justify-between"><span className="text-gray-500 dark:text-cool-slate">Diagnosis</span><span className="font-medium text-farm-accent">{selectedDetection.disease}</span></div>
+                <div className="flex justify-between"><span className="text-gray-500 dark:text-cool-slate">Confidence</span><span className="text-healthy-emerald font-bold">{selectedDetection.confidence}</span></div>
+                <div className="flex justify-between"><span className="text-gray-500 dark:text-cool-slate">Severity</span><span><SeverityBadge severity={selectedDetection.severity} /></span></div>
               </div>
             </div>
             <div className="mt-4 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg text-sm text-blue-100">
@@ -1168,12 +1169,13 @@ const AdminDashboard: React.FC = () => {
               <p>Apply appropriate fungicide based on crop and severity. Ensure proper irrigation and monitor for next 7 days.</p>
             </div>
             <div className="mt-6 flex justify-end gap-3">
-              <button onClick={() => { toast('Marked as False Detection', 'info'); setSelectedDetection(null); }} className="px-4 py-2 bg-white/5 hover:bg-white/10 rounded-lg text-sm transition-colors">Mark False Positive</button>
+              <button onClick={() => { toast('Marked as False Detection', 'info'); setSelectedDetection(null); }} className="px-4 py-2 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 rounded-lg text-sm transition-colors">Mark False Positive</button>
               <button onClick={() => setSelectedDetection(null)} className="px-4 py-2 bg-farm-accent hover:bg-farm-accent/90 text-black font-semibold rounded-lg text-sm transition-colors">Close</button>
             </div>
           </div>
         </div>
       )}
+    </div>
     </div>
   );
 };
